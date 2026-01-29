@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRIBBUTE Auditor</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>TRIBBUTE Auditor</h1>
+    </header>
+
+    <section class="section">
+      <h2 class="section-title">TRACKING FOUND</h2>
+      <div id="tracking-list" class="tracking-list">
+        <div class="loading">Scanning...</div>
+      </div>
+    </section>
+
+    <section class="section tabs-section">
+      <div class="tabs">
+        <button class="tab active" data-tab="events">Events</button>
+        <button class="tab" data-tab="audit">
+          Audit
+          <span id="audit-badge" class="badge hidden">0</span>
+        </button>
+        <button class="tab" data-tab="schema">
+          Schema
+          <span id="schema-badge" class="badge hidden">0</span>
+        </button>
+      </div>
+
+      <!-- Events Tab -->
+      <div id="events-tab" class="tab-content active">
+        <div class="tab-header">
+          <select id="filter-select" class="filter-select">
+            <option value="all">All Events</option>
+            <option value="ga4">GA4 / dataLayer</option>
+            <option value="fb">Facebook Pixel</option>
+          </select>
+        </div>
+        <div id="events-list" class="events-list">
+          <div class="no-events">No events captured yet. Interact with the page to trigger events.</div>
+        </div>
+        <div class="actions">
+          <button id="copy-all-btn" class="btn btn-primary">Copy All</button>
+          <button id="clear-btn" class="btn btn-secondary">Clear</button>
+        </div>
+      </div>
+
+      <!-- Audit Tab -->
+      <div id="audit-tab" class="tab-content">
+        <div id="audit-list" class="audit-list">
+          <div class="no-issues">No issues detected. Events look good!</div>
+        </div>
+        <div class="actions">
+          <button id="copy-audit-btn" class="btn btn-primary">Copy Audit</button>
+          <button id="refresh-audit-btn" class="btn btn-secondary">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Schema Tab -->
+      <div id="schema-tab" class="tab-content">
+        <div id="schema-list" class="schema-list">
+          <div class="no-schema">Scanning for schema data...</div>
+        </div>
+        <div class="actions">
+          <button id="copy-schema-btn" class="btn btn-primary">Copy Schema</button>
+          <button id="refresh-schema-btn" class="btn btn-secondary">Refresh</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
