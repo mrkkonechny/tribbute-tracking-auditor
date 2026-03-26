@@ -1,4 +1,4 @@
-// TRIBBUTE Tracking Auditor - Background Service Worker
+// opsIQ - Background Service Worker
 
 // Forward messages between popup and content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -13,8 +13,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Handle extension installation
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    console.log('TRIBBUTE Tracking Auditor installed');
+    console.log('opsIQ installed');
   } else if (details.reason === 'update') {
-    console.log('TRIBBUTE Tracking Auditor updated');
+    console.log('opsIQ updated');
   }
 });

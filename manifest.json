@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "TRIBBUTE Auditor",
+  "name": "opsIQ",
   "version": "1.2.0",
   "description": "Audit tracking implementations, schema markup, and monitor real-time events",
   "permissions": ["activeTab", "scripting"],
