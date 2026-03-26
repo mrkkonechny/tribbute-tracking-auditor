@@ -1,4 +1,4 @@
-// TRIBBUTE Auditor - Popup Script
+// opsIQ - Popup Script
 
 (function() {
   'use strict';
@@ -416,7 +416,7 @@
 
   function generateAuditReport(pageUrl) {
     let report = '════════════════════════════════════════════════════════════\n';
-    report += '               TRIBBUTE TRACKING AUDIT REPORT\n';
+    report += '               opsIQ TRACKING AUDIT REPORT\n';
     report += '════════════════════════════════════════════════════════════\n\n';
 
     report += `URL:  ${pageUrl || 'N/A'}\n`;
@@ -1177,7 +1177,7 @@
 
   function generateSchemaReport(pageUrl) {
     let report = '════════════════════════════════════════════════════════════\n';
-    report += '               TRIBBUTE SCHEMA AUDIT REPORT\n';
+    report += '               opsIQ SCHEMA AUDIT REPORT\n';
     report += '════════════════════════════════════════════════════════════\n\n';
 
     report += `URL:  ${pageUrl || 'N/A'}\n`;
@@ -1539,7 +1539,7 @@
     };
 
     let report = '════════════════════════════════════════════════════════════\n';
-    report += '               TRIBBUTE TRACKING AUDITOR REPORT\n';
+    report += '               opsIQ TRACKING AUDITOR REPORT\n';
     report += '════════════════════════════════════════════════════════════\n\n';
 
     report += `URL:  ${pageUrl || 'N/A'}\n`;
