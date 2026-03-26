@@ -22,9 +22,36 @@ Track architectural, technical, and strategic decisions with their rationale. Mo
 
 ## Decisions
 
+### DEC-0004: Migrate UI surface from popup to Chrome Side Panel
+
+**Date:** 2026-03-26
+**Status:** Accepted
+**Supersedes:** DEC-0003
+
+**Context:**
+The popup surface (380px × 400px fixed) was too constrained for the data opsIQ needs to display: 200px scroll areas for events, audit issues, and schema items made the tool difficult to use in practice. User feedback confirmed the cramped layout was the primary usability complaint.
+
+**Decision:**
+Migrate the UI to a Chrome Side Panel, giving the full browser height and persistent display across page navigations.
+
+**Rationale:**
+- Side panel provides full viewport height — eliminates all fixed-height constraints
+- Persistent across navigations — events accumulate across page loads without re-opening
+- Consistent with pdpIQ (another product in the same suite) which uses the same surface
+- Chrome Side Panel API (MV3) is stable and supported in Chrome 114+
+
+**Consequences:**
+- `popup.html/css/js` are retired from the manifest (kept on disk for reference)
+- `sidepanel.html/css/js` replace them as the UI entry point
+- New `chrome.runtime.connect` port pattern replaces `window.unload` for open/close detection
+- `background.js` gains page navigation relay and port handshake logic
+- Extension version bumped to 1.3.0
+
+---
+
 ### DEC-0003 — Use popup (not side panel) as the UI surface
 - **Date:** 2026-03-26
-- **Status:** Accepted
+- **Status:** Superseded by DEC-0004
 - **Context:** Chrome MV3 supports two persistent UI surfaces: popup (opens on toolbar click, closes on outside click) and side panel (persistent beside page, survives navigation). pdpIQ uses the side panel because its analysis results need to persist while users scroll. opsIQ is used for quick validation checks.
 - **Decision:** Use the popup as the UI surface.
 - **Rationale:** opsIQ's use case is "open, verify, close" — not a persistent analysis tool. The popup is lighter, requires no `sidePanel` permission, and matches the interaction model: open to confirm tracking is firing, then close and continue browsing.
