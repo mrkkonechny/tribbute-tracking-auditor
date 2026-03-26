@@ -81,3 +81,19 @@ Provides actionable recommendations for improving schema markup:
 3. Check the Events tab for captured events
 4. Check the Audit tab for event validation issues
 5. Check the Schema tab for structured data audit
+
+## Product Development Standard (PDS)
+
+This project follows the opsIQ PDS. Read `docs/00-PDS_README.md` for the full structure and `.claude/rules/pds-protocol.md` for operational rules.
+
+### Documentation Structure
+- `docs/01-06` — Product definition and operations (update with explicit instruction only)
+- `docs/07-10` — Tracking files (update proactively during work)
+- `docs/.context/` — Ephemeral agent handoff files (overwrite each task)
+
+### ID Systems
+- **DEC-NNNN** → Decision Log (07)
+- **ROAD-NNNN** → Roadmap (08)
+- **BUG-NNNN** → Bug Log (09)
+
+When you encounter a bug, complete a feature, make an architectural decision, or identify tech debt during any task, update the relevant tracking files and cross-reference IDs.
