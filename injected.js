@@ -1,4 +1,4 @@
-// TRIBBUTE Tracking Auditor - Injected Script
+// opsIQ - Injected Script
 // This script runs in the page context to intercept tracking calls
 
 (function() {
@@ -64,7 +64,7 @@
         clearInterval(checkDataLayer);
 
         // Check if already intercepted
-        if (window.dataLayer.__tribbute) return;
+        if (window.dataLayer.__opsiq) return;
 
         const originalPush = window.dataLayer.push.bind(window.dataLayer);
 
@@ -76,7 +76,7 @@
                 const [command, nameOrId, params] = arg;
 
                 if (command === 'event') {
-                  dispatchEvent('__tribbute_event__', {
+                  dispatchEvent('__opsiq_event__', {
                     source: 'dataLayer',
                     name: nameOrId || 'unknown',
                     data: cloneEventData(params || {})
@@ -84,11 +84,11 @@
                 } else if (command === 'config' && nameOrId) {
                   const id = String(nameOrId).toUpperCase();
                   if (id.startsWith('G-')) {
-                    dispatchEvent('__tribbute_tracking__', { type: 'ga4', ids: [id] });
+                    dispatchEvent('__opsiq_tracking__', { type: 'ga4', ids: [id] });
                   } else if (id.startsWith('AW-')) {
-                    dispatchEvent('__tribbute_tracking__', { type: 'gads', ids: [id] });
+                    dispatchEvent('__opsiq_tracking__', { type: 'gads', ids: [id] });
                   } else if (id.startsWith('GTM-')) {
-                    dispatchEvent('__tribbute_tracking__', { type: 'gtm', ids: [id] });
+                    dispatchEvent('__opsiq_tracking__', { type: 'gtm', ids: [id] });
                   }
                 }
               }
@@ -101,7 +101,7 @@
                   // Clone the entire object for display
                   const clonedData = cloneEventData(arg);
 
-                  dispatchEvent('__tribbute_event__', {
+                  dispatchEvent('__opsiq_event__', {
                     source: 'dataLayer',
                     name: eventName,
                     data: clonedData
@@ -114,7 +114,7 @@
           return originalPush(...args);
         };
 
-        window.dataLayer.__tribbute = true;
+        window.dataLayer.__opsiq = true;
 
         // Process existing dataLayer entries for tracking IDs
         for (const item of window.dataLayer) {
@@ -122,11 +122,11 @@
             if (Array.isArray(item) && item[0] === 'config' && item[1]) {
               const id = String(item[1]).toUpperCase();
               if (id.startsWith('G-')) {
-                dispatchEvent('__tribbute_tracking__', { type: 'ga4', ids: [id] });
+                dispatchEvent('__opsiq_tracking__', { type: 'ga4', ids: [id] });
               } else if (id.startsWith('AW-')) {
-                dispatchEvent('__tribbute_tracking__', { type: 'gads', ids: [id] });
+                dispatchEvent('__opsiq_tracking__', { type: 'gads', ids: [id] });
               } else if (id.startsWith('GTM-')) {
-                dispatchEvent('__tribbute_tracking__', { type: 'gtm', ids: [id] });
+                dispatchEvent('__opsiq_tracking__', { type: 'gtm', ids: [id] });
               }
             }
           }
@@ -141,7 +141,7 @@
   // Intercept gtag function
   function interceptGtag() {
     const checkGtag = setInterval(() => {
-      if (typeof window.gtag === 'function' && !window.gtag.__tribbute) {
+      if (typeof window.gtag === 'function' && !window.gtag.__opsiq) {
         clearInterval(checkGtag);
 
         const originalGtag = window.gtag;
@@ -150,7 +150,7 @@
           const [command, eventNameOrId, params] = args;
 
           if (command === 'event') {
-            dispatchEvent('__tribbute_event__', {
+            dispatchEvent('__opsiq_event__', {
               source: 'gtag',
               name: eventNameOrId,
               data: cloneEventData(params || {})
@@ -158,17 +158,17 @@
           } else if (command === 'config' && eventNameOrId) {
             const id = String(eventNameOrId).toUpperCase();
             if (id.startsWith('G-')) {
-              dispatchEvent('__tribbute_tracking__', { type: 'ga4', ids: [id] });
+              dispatchEvent('__opsiq_tracking__', { type: 'ga4', ids: [id] });
             } else if (id.startsWith('AW-')) {
-              dispatchEvent('__tribbute_tracking__', { type: 'gads', ids: [id] });
+              dispatchEvent('__opsiq_tracking__', { type: 'gads', ids: [id] });
             } else if (id.startsWith('GTM-')) {
-              dispatchEvent('__tribbute_tracking__', { type: 'gtm', ids: [id] });
+              dispatchEvent('__opsiq_tracking__', { type: 'gtm', ids: [id] });
             }
           }
 
           return originalGtag.apply(this, args);
         };
-        window.gtag.__tribbute = true;
+        window.gtag.__opsiq = true;
       }
     }, 100);
 
@@ -178,7 +178,7 @@
   // Intercept Facebook Pixel
   function interceptFbq() {
     const checkFbq = setInterval(() => {
-      if (typeof window.fbq === 'function' && !window.fbq.__tribbute) {
+      if (typeof window.fbq === 'function' && !window.fbq.__opsiq) {
         clearInterval(checkFbq);
 
         const originalFbq = window.fbq;
@@ -190,7 +190,7 @@
             if (state && state.pixels) {
               const ids = state.pixels.map(p => String(p.id));
               if (ids.length > 0) {
-                dispatchEvent('__tribbute_tracking__', { type: 'fb', ids });
+                dispatchEvent('__opsiq_tracking__', { type: 'fb', ids });
               }
             }
           }
@@ -198,7 +198,7 @@
           if (window.fbq.queue && Array.isArray(window.fbq.queue)) {
             for (const item of window.fbq.queue) {
               if (item && item[0] === 'init' && item[1]) {
-                dispatchEvent('__tribbute_tracking__', { type: 'fb', ids: [String(item[1])] });
+                dispatchEvent('__opsiq_tracking__', { type: 'fb', ids: [String(item[1])] });
               }
             }
           }
@@ -208,7 +208,7 @@
             if (state && state.pixels) {
               const ids = state.pixels.map(p => String(p.id));
               if (ids.length > 0) {
-                dispatchEvent('__tribbute_tracking__', { type: 'fb', ids });
+                dispatchEvent('__opsiq_tracking__', { type: 'fb', ids });
               }
             }
           }
@@ -220,9 +220,9 @@
           const [command, eventNameOrId, params] = args;
 
           if (command === 'init') {
-            dispatchEvent('__tribbute_tracking__', { type: 'fb', ids: [String(eventNameOrId)] });
+            dispatchEvent('__opsiq_tracking__', { type: 'fb', ids: [String(eventNameOrId)] });
           } else if (command === 'track' || command === 'trackCustom') {
-            dispatchEvent('__tribbute_event__', {
+            dispatchEvent('__opsiq_event__', {
               source: 'fbq',
               name: eventNameOrId,
               data: cloneEventData(params || {})
@@ -238,7 +238,7 @@
             window.fbq[prop] = originalFbq[prop];
           }
         }
-        window.fbq.__tribbute = true;
+        window.fbq.__opsiq = true;
       }
     }, 100);
 
@@ -251,7 +251,7 @@
       if (window.google_tag_manager) {
         const ids = Object.keys(window.google_tag_manager).filter(id => /^GTM-/i.test(id));
         if (ids.length > 0) {
-          dispatchEvent('__tribbute_tracking__', { type: 'gtm', ids: ids.map(id => id.toUpperCase()) });
+          dispatchEvent('__opsiq_tracking__', { type: 'gtm', ids: ids.map(id => id.toUpperCase()) });
         }
         clearInterval(check);
       }
