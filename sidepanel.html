@@ -12,7 +12,7 @@
     <!-- Sticky header -->
     <header class="header">
       <div class="header-top">
-        <span class="header-logo">opsIQ</span>
+        <h1 class="header-logo">opsIQ</h1>
         <span class="header-url" id="currentUrl" title="">—</span>
       </div>
 
@@ -33,7 +33,7 @@
     <!-- Tab content areas -->
     <main class="main-content">
 
-      <section id="tab-events" class="tab-section" role="tabpanel" aria-labelledby="nav-events">
+      <section id="tab-events" class="tab-section" role="tabpanel" aria-labelledby="nav-events" tabindex="0">
         <div class="section-toolbar">
           <label for="eventFilter" class="sr-only">Filter events</label>
           <select id="eventFilter" class="filter-select">
@@ -50,7 +50,7 @@
         </div>
       </section>
 
-      <section id="tab-audit" class="tab-section hidden" role="tabpanel" aria-labelledby="nav-audit">
+      <section id="tab-audit" class="tab-section hidden" role="tabpanel" aria-labelledby="nav-audit" tabindex="-1">
         <div class="section-toolbar">
           <span class="audit-count" id="auditCount">0 issues</span>
           <button id="copyAudit" class="toolbar-btn">Copy Audit</button>
@@ -60,19 +60,19 @@
         </div>
       </section>
 
-      <section id="tab-schema" class="tab-section hidden" role="tabpanel" aria-labelledby="nav-schema">
+      <section id="tab-schema" class="tab-section hidden" role="tabpanel" aria-labelledby="nav-schema" tabindex="-1">
         <div class="section-toolbar">
           <button id="copySchema" class="toolbar-btn">Copy Schema</button>
         </div>
         <div class="schema-stacked">
           <div class="schema-sub-section">
-            <h3 class="sub-section-title">Schema Validation</h3>
+            <h2 class="sub-section-title">Schema Validation</h2>
             <div id="schemaList" class="schema-list" role="list" aria-label="Schema items">
               <p class="empty-state">No schema detected.</p>
             </div>
           </div>
           <div class="schema-sub-section">
-            <h3 class="sub-section-title">Implementation Opportunities</h3>
+            <h2 class="sub-section-title">Implementation Opportunities</h2>
             <div id="opportunitiesList" class="opportunities-list" role="list" aria-label="Schema opportunities">
               <p class="empty-state">No recommendations.</p>
             </div>
@@ -83,24 +83,24 @@
     </main>
 
     <!-- Fixed bottom navigation -->
-    <nav class="bottom-nav" role="tablist" aria-label="opsIQ sections">
+    <div class="bottom-nav" role="tablist" aria-label="opsIQ sections">
       <button class="nav-btn active" id="nav-events" role="tab" data-tab="events"
-              aria-selected="true" aria-controls="tab-events">
+              aria-selected="true" aria-controls="tab-events" tabindex="0">
         <span class="nav-icon" aria-hidden="true">📡</span>
         <span class="nav-label">Events</span>
       </button>
       <button class="nav-btn" id="nav-audit" role="tab" data-tab="audit"
-              aria-selected="false" aria-controls="tab-audit">
+              aria-selected="false" aria-controls="tab-audit" tabindex="-1">
         <span class="nav-icon" aria-hidden="true">✓</span>
         <span class="nav-label">Audit</span>
-        <span class="nav-badge hidden" id="auditBadge" aria-label="audit issues count">0</span>
+        <span class="nav-badge hidden" id="auditBadge" aria-hidden="true">0</span>
       </button>
       <button class="nav-btn" id="nav-schema" role="tab" data-tab="schema"
-              aria-selected="false" aria-controls="tab-schema">
+              aria-selected="false" aria-controls="tab-schema" tabindex="-1">
         <span class="nav-icon" aria-hidden="true">🏷</span>
         <span class="nav-label">Schema</span>
       </button>
-    </nav>
+    </div>
 
   </div>
   <script src="sidepanel.js" type="module"></script>
