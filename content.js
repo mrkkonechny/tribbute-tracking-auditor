@@ -1,4 +1,4 @@
-// TRIBBUTE Auditor - Content Script
+// opsIQ - Content Script
 // This script detects tracking implementations, schema data, and monitors events
 
 (function() {
@@ -69,7 +69,7 @@
       (document.head || document.documentElement).appendChild(script);
       script.remove();
     } catch (e) {
-      console.log('TRIBBUTE: Could not inject interceptor script');
+      console.log('opsIQ: Could not inject interceptor script');
     }
   }
 
@@ -98,7 +98,7 @@
 
     // Intercept dataLayer
     var checkDL = setInterval(function() {
-      if (window.dataLayer && Array.isArray(window.dataLayer) && !window.dataLayer.__tribbute) {
+      if (window.dataLayer && Array.isArray(window.dataLayer) && !window.dataLayer.__opsiq) {
         clearInterval(checkDL);
         var origPush = window.dataLayer.push.bind(window.dataLayer);
         window.dataLayer.push = function() {
@@ -106,53 +106,53 @@
             var arg = arguments[i];
             if (arg && typeof arg === 'object') {
               if (Array.isArray(arg) && arg[0] === 'event') {
-                dispatchEvent('__tribbute_event__', { source: 'dataLayer', name: arg[1] || 'unknown', data: cloneData(arg[2] || {}, 0) });
+                dispatchEvent('__opsiq_event__', { source: 'dataLayer', name: arg[1] || 'unknown', data: cloneData(arg[2] || {}, 0) });
               } else if (arg.event && typeof arg.event === 'string' && !arg.event.startsWith('gtm.')) {
-                dispatchEvent('__tribbute_event__', { source: 'dataLayer', name: arg.event, data: cloneData(arg, 0) });
+                dispatchEvent('__opsiq_event__', { source: 'dataLayer', name: arg.event, data: cloneData(arg, 0) });
               }
             }
           }
           return origPush.apply(window.dataLayer, arguments);
         };
-        window.dataLayer.__tribbute = true;
+        window.dataLayer.__opsiq = true;
       }
     }, 100);
     setTimeout(function() { clearInterval(checkDL); }, 10000);
 
     // Intercept gtag
     var checkGtag = setInterval(function() {
-      if (typeof window.gtag === 'function' && !window.gtag.__tribbute) {
+      if (typeof window.gtag === 'function' && !window.gtag.__opsiq) {
         clearInterval(checkGtag);
         var origGtag = window.gtag;
         window.gtag = function(cmd, name, params) {
           if (cmd === 'event') {
-            dispatchEvent('__tribbute_event__', { source: 'gtag', name: name, data: cloneData(params || {}, 0) });
+            dispatchEvent('__opsiq_event__', { source: 'gtag', name: name, data: cloneData(params || {}, 0) });
           } else if (cmd === 'config' && name) {
             var id = String(name).toUpperCase();
-            if (id.startsWith('G-')) dispatchEvent('__tribbute_tracking__', { type: 'ga4', ids: [id] });
-            else if (id.startsWith('AW-')) dispatchEvent('__tribbute_tracking__', { type: 'gads', ids: [id] });
+            if (id.startsWith('G-')) dispatchEvent('__opsiq_tracking__', { type: 'ga4', ids: [id] });
+            else if (id.startsWith('AW-')) dispatchEvent('__opsiq_tracking__', { type: 'gads', ids: [id] });
           }
           return origGtag.apply(this, arguments);
         };
-        window.gtag.__tribbute = true;
+        window.gtag.__opsiq = true;
       }
     }, 100);
     setTimeout(function() { clearInterval(checkGtag); }, 10000);
 
     // Intercept fbq
     var checkFbq = setInterval(function() {
-      if (typeof window.fbq === 'function' && !window.fbq.__tribbute) {
+      if (typeof window.fbq === 'function' && !window.fbq.__opsiq) {
         clearInterval(checkFbq);
         var origFbq = window.fbq;
         window.fbq = function(cmd, name, params) {
-          if (cmd === 'init') dispatchEvent('__tribbute_tracking__', { type: 'fb', ids: [String(name)] });
+          if (cmd === 'init') dispatchEvent('__opsiq_tracking__', { type: 'fb', ids: [String(name)] });
           else if (cmd === 'track' || cmd === 'trackCustom') {
-            dispatchEvent('__tribbute_event__', { source: 'fbq', name: name, data: cloneData(params || {}, 0) });
+            dispatchEvent('__opsiq_event__', { source: 'fbq', name: name, data: cloneData(params || {}, 0) });
           }
           return origFbq.apply(this, arguments);
         };
         for (var p in origFbq) { if (origFbq.hasOwnProperty(p)) window.fbq[p] = origFbq[p]; }
-        window.fbq.__tribbute = true;
+        window.fbq.__opsiq = true;
       }
     }, 100);
     setTimeout(function() { clearInterval(checkFbq); }, 10000);
@@ -161,7 +161,7 @@
     var checkGTM = setInterval(function() {
       if (window.google_tag_manager) {
         var ids = Object.keys(window.google_tag_manager).filter(function(id) { return /^GTM-/i.test(id); });
-        if (ids.length > 0) dispatchEvent('__tribbute_tracking__', { type: 'gtm', ids: ids.map(function(id) { return id.toUpperCase(); }) });
+        if (ids.length > 0) dispatchEvent('__opsiq_tracking__', { type: 'gtm', ids: ids.map(function(id) { return id.toUpperCase(); }) });
         clearInterval(checkGTM);
       }
     }, 500);
@@ -169,7 +169,7 @@
   }
 
   // Listen for events from the injected script
-  window.addEventListener('__tribbute_event__', function(e) {
+  window.addEventListener('__opsiq_event__', function(e) {
     if (!isContextValid) return;
 
     const eventData = e.detail;
@@ -188,7 +188,7 @@
   });
 
   // Listen for tracking detection from injected script
-  window.addEventListener('__tribbute_tracking__', function(e) {
+  window.addEventListener('__opsiq_tracking__', function(e) {
     if (!isContextValid) return;
 
     const data = e.detail;
