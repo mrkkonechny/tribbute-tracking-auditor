@@ -112,19 +112,16 @@ opsIQ solves this by providing an always-available browser extension that detect
 
 ---
 
-## 7. Competitive & Alternative Landscape
+## 7. Competitive / Alternative Landscape
 
-| Tool | What It Does | Gap vs. opsIQ |
-|---|---|---|
-| Chrome DevTools (Network + Console) | Raw network inspection, console logging | High expertise barrier; no structured validation; no schema audit; no tracking ID summary |
-| GTM Preview Mode | Shows GTM tags and dataLayer events in debug mode | GTM-only; requires GTM container access; no field validation; no schema |
-| GA4 DebugView | Shows GA4 events in the GA4 property interface | Requires GA4 property access; 5–10 second latency; no required-field validation; no schema |
-| Google Tag Assistant (Legacy) | Validates GTM / GA / Ads tags | Deprecated; no GA4 ecommerce validation; no schema; Chrome 88+ issues |
-| Google Rich Results Test | Validates schema for rich result eligibility | Requires URL submission; no auth/staging support; no tracking detection; not real-time |
-| Facebook Pixel Helper | Validates Facebook Pixel events in-browser | Facebook Pixel only; no GA4 validation; no schema; separate extension required |
-| Schema Markup Validator (schema.org) | Validates schema against schema.org spec | URL submission only; no real-time; no tracking; no integration with event data |
-
-**opsIQ's differentiator:** The only tool that combines tracking detection, real-time event validation (GA4 + Pixel), and schema audit in a single zero-telemetry popup panel accessible without DevTools expertise or external server round-trips.
+| Alternative | Why Not Sufficient |
+|------------|-------------------|
+| Chrome DevTools (Network tab) | Requires filtering gtag/collect requests and reading raw query parameters; no validation of required fields; no schema parsing; requires expert knowledge |
+| GTM Preview Mode | Only works for GTM-managed tags; requires GTM account access; separate browser tab; no GA4 ecommerce event validation; no Facebook Pixel; no schema audit |
+| GA4 DebugView | Requires debug mode enabled in gtag config; only shows events reaching GA4 servers (not local validation); no Facebook Pixel; no schema coverage; delayed by several seconds |
+| Google's Rich Results Test | Schema-only; validates one URL at a time; not integrated into browsing workflow; does not show raw schema data or non-Google schema types |
+| Facebook Pixel Helper | Facebook Pixel only; no GTM/GA4/Google Ads; no schema; no GA4 ecommerce validation |
+| Tag Assistant | GTM-specific; no GA4 ecommerce event validation beyond basic hit confirmation; no Facebook Pixel; no schema audit |
 
 ---
 

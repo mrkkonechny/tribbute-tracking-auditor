@@ -328,6 +328,22 @@ All message objects have a `type` string field as a discriminator.
 
 ---
 
+### 3.4 `GET_EVENTS` (popup → content)
+
+Sent by popup to fetch the current event list without re-scanning for tracking.
+
+**Request:**
+```js
+{ type: 'GET_EVENTS' }
+```
+
+**Response:**
+```js
+{ events: EventData[] }
+```
+
+---
+
 ### `POPUP_CLOSED`
 
 **Direction:** Popup → Content script
