@@ -1,4 +1,4 @@
-# TRIBBUTE Auditor
+# opsIQ
 
 A Chrome extension that audits tracking implementations, schema markup, and monitors real-time events.
 
@@ -60,17 +60,17 @@ Provides prioritized recommendations for improving schema markup:
 
 4. **Load the extension**
    - Click "Load unpacked"
-   - Select the `tribbute-tracking-auditor` folder
+   - Select the `opsIQ` folder
 
 5. **Pin the extension** (optional)
    - Click the puzzle piece icon in Chrome's toolbar
-   - Click the pin icon next to "TRIBBUTE Auditor"
+   - Click the pin icon next to "opsIQ"
 
 ## Usage
 
 1. **Navigate to any website** you want to audit
 
-2. **Click the TRIBBUTE Auditor icon** in your browser toolbar
+2. **Click the opsIQ icon** in your browser toolbar
 
 3. **View detected tracking** at the top of the popup
    - Click the copy icon to copy any tracking ID
@@ -103,7 +103,7 @@ tribbute-tracking-auditor/
 ### Local Development
 1. Make changes to the source files
 2. Go to `chrome://extensions/`
-3. Click the refresh icon on the TRIBBUTE Auditor card
+3. Click the refresh icon on the opsIQ card
 4. Test your changes
 
 ## License

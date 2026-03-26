@@ -1,4 +1,4 @@
-# TRIBBUTE Auditor
+# opsIQ
 
 A Chrome extension that audits tracking implementations, schema markup, and monitors real-time events.
 
@@ -8,7 +8,7 @@ A Chrome extension that audits tracking implementations, schema markup, and moni
 tribbute-tracking-auditor/
 ├── manifest.json    # Chrome extension manifest (Manifest V3)
 ├── popup.html       # Extension popup UI with tabbed interface
-├── popup.css        # Popup styles with TRIBBUTE branding
+├── popup.css        # Popup styles with opsIQ branding
 ├── popup.js         # Popup logic, validation, and event handling
 ├── content.js       # Content script for DOM scanning and tracking detection
 ├── injected.js      # Page context script for intercepting tracking calls
