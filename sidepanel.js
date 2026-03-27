@@ -712,7 +712,463 @@ class OpsIQPanel {
     return item;
   }
 
-  loadSchemaData() {}
+  // ─── Schema tab ───────────────────────────────────────────────────────────
+  async loadSchemaData() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+
+    try {
+      const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_SCHEMA_DATA' });
+      if (response?.schema) {
+        this.schemaData = response.schema;
+        this.renderSchema();
+      }
+    } catch (e) {
+      document.getElementById('schemaList').innerHTML =
+        '<p class="empty-state">Could not load schema data. Try reloading the page.</p>';
+    }
+  }
+
+  renderSchema() {
+    const schemaList = document.getElementById('schemaList');
+    const oppList = document.getElementById('opportunitiesList');
+
+    if (!this.schemaData) {
+      schemaList.innerHTML = '<p class="empty-state">No schema detected.</p>';
+      oppList.innerHTML = '<p class="empty-state">No recommendations.</p>';
+      return;
+    }
+
+    const schemas = this.schemaData.schemas || [];
+    const opportunities = this.schemaData.opportunities || [];
+
+    // Schema Validation sub-section
+    if (schemas.length === 0) {
+      schemaList.innerHTML = '<p class="empty-state">No schema markup found.</p>';
+    } else {
+      schemaList.innerHTML = '';
+      schemas.forEach(schema => {
+        schemaList.appendChild(this.createSchemaItem(schema));
+      });
+    }
+
+    // Opportunities sub-section
+    if (opportunities.length === 0) {
+      oppList.innerHTML = '<p class="empty-state">No recommendations.</p>';
+    } else {
+      oppList.innerHTML = '';
+      opportunities.forEach(opp => {
+        oppList.appendChild(this.createOpportunityItem(opp));
+      });
+    }
+  }
+
+  createSchemaItem(schema) {
+    const item = document.createElement('div');
+    item.className = 'schema-item';
+    item.setAttribute('role', 'listitem');
+
+    const issues = this.validateSchemaItem(schema);
+    const hasErrors = issues.some(i => i.severity === 'error');
+    const hasWarnings = issues.some(i => i.severity === 'warning');
+
+    // WCAG Level A: text prefix, not color-only
+    const statusPrefix = hasErrors  ? '[✗] '
+                       : hasWarnings ? '[!] '
+                       : '[✓] ';
+    const statusClass  = hasErrors  ? 'schema-status-fail'
+                       : hasWarnings ? 'schema-status-warn'
+                       : 'schema-status-pass';
+
+    const typeLabel = this.escapeHtml(schema.type || 'Unknown');
+    const formatLabel = this.escapeHtml(schema.format || '');
+
+    item.innerHTML = `
+      <div class="schema-item-header">
+        <span class="${statusClass}" aria-hidden="true">${statusPrefix}</span>
+        <span>${typeLabel}</span>
+        ${formatLabel ? `<span style="color:var(--text-muted);font-size:11px">${formatLabel}</span>` : ''}
+      </div>
+      ${issues.length > 0 ? `
+        <div class="schema-item-issues">
+          ${issues.map(i => `<div class="schema-issue-line">${this.escapeHtml(i.message)}</div>`).join('')}
+        </div>` : ''}
+    `;
+    return item;
+  }
+
+  createOpportunityItem(opp) {
+    const item = document.createElement('div');
+    item.className = 'opportunity-item';
+    item.setAttribute('role', 'listitem');
+
+    const priority = (opp.priority || 'LOW').toUpperCase();
+    const priorityClass = priority === 'HIGH' ? 'priority-high'
+                        : priority === 'MEDIUM' ? 'priority-medium'
+                        : 'priority-low';
+
+    item.innerHTML = `
+      <div class="opportunity-priority ${priorityClass}">${this.escapeHtml(priority)}</div>
+      <div class="opportunity-title">${this.escapeHtml(opp.title || opp.type || '')}</div>
+      ${opp.description ? `<div class="opportunity-detail">${this.escapeHtml(opp.description)}</div>` : ''}
+    `;
+    return item;
+  }
+
+  // ─── Schema validation helpers (ported from popup.js) ─────────────────────
+  validateSchemaItem(item, allItems = []) {
+    const issues = [];
+    const type = item.type;
+    const data = item.data || {};
+
+    // Check for parse errors
+    if (type === 'PARSE_ERROR') {
+      issues.push({
+        severity: 'error',
+        message: `Invalid JSON: ${data.error || 'Parse error'}`
+      });
+      return issues;
+    }
+
+    // Check for @context (JSON-LD) - but not for items inside @graph (they inherit context)
+    if (item.format === 'JSON-LD' && !data['@context'] && !item.source.includes('@graph')) {
+      issues.push({
+        severity: 'warning',
+        message: 'Missing @context (should be "https://schema.org")'
+      });
+    }
+
+    // Check if @context is correct
+    if (data['@context'] && !String(data['@context']).includes('schema.org')) {
+      issues.push({
+        severity: 'warning',
+        message: `Non-standard @context: ${data['@context']}`
+      });
+    }
+
+    // Detect if this is a Product variant
+    const isVariant = type === 'Product' && this._isProductVariant(data);
+
+    // Check if there's a parent ProductGroup that has the inherited fields
+    let hasParentProductGroup = false;
+    if (isVariant) {
+      hasParentProductGroup = allItems.some(i =>
+        i.type === 'ProductGroup' &&
+        (i.data.productGroupID === data.inProductGroupWithID ||
+         i.data['@id'] === data.isVariantOf?.['@id'])
+      );
+    }
+
+    // Get validation rules for this type
+    const rules = this._schemaRules[type];
+
+    if (rules) {
+      // Check required fields
+      for (const field of rules.required) {
+        const value = this._getSchemaValue(data, field);
+        if (!this._hasValue(value)) {
+          issues.push({
+            severity: 'error',
+            message: `Missing required field: ${field}`
+          });
+        }
+      }
+
+      // Check recommended fields
+      for (const field of rules.recommended) {
+        // Skip inherited fields for Product variants that have a parent ProductGroup
+        if (isVariant && hasParentProductGroup && this._variantInheritedFields.includes(field)) {
+          continue; // Field is inherited from ProductGroup
+        }
+
+        const value = this._getSchemaValue(data, field);
+        if (!this._hasValue(value)) {
+          // For variants without confirmed parent, show as info instead of warning
+          if (isVariant && this._variantInheritedFields.includes(field)) {
+            issues.push({
+              severity: 'info',
+              message: `${field} may be inherited from ProductGroup`
+            });
+          } else {
+            issues.push({
+              severity: 'warning',
+              message: `Missing recommended field: ${field}`
+            });
+          }
+        }
+      }
+
+      // Special validation for Product offers
+      if (type === 'Product' && data.offers) {
+        const offers = Array.isArray(data.offers) ? data.offers : [data.offers];
+        // Only check first few offers to avoid spam
+        const offersToCheck = offers.slice(0, 3);
+        offersToCheck.forEach((offer, i) => {
+          if (rules.offerFields) {
+            for (const field of rules.offerFields) {
+              if (!this._hasValue(offer[field])) {
+                issues.push({
+                  severity: 'warning',
+                  message: `Offer ${i + 1} missing: ${field}`
+                });
+              }
+            }
+          }
+        });
+        if (offers.length > 3) {
+          // Just note there are more offers
+          issues.push({
+            severity: 'info',
+            message: `${offers.length - 3} more offers not shown`
+          });
+        }
+      }
+
+      // Check for AggregateRating in Product (but not variants - they inherit it)
+      if (type === 'Product' && !isVariant && data.aggregateRating) {
+        if (!this._hasValue(data.aggregateRating.ratingValue)) {
+          issues.push({
+            severity: 'error',
+            message: 'AggregateRating missing ratingValue'
+          });
+        }
+        if (!data.aggregateRating.reviewCount && !data.aggregateRating.ratingCount) {
+          issues.push({
+            severity: 'error',
+            message: 'AggregateRating missing reviewCount or ratingCount'
+          });
+        }
+      }
+
+      // Check for AggregateRating in ProductGroup
+      if (type === 'ProductGroup' && data.aggregateRating) {
+        if (!this._hasValue(data.aggregateRating.ratingValue)) {
+          issues.push({
+            severity: 'error',
+            message: 'AggregateRating missing ratingValue'
+          });
+        }
+        if (!data.aggregateRating.reviewCount && !data.aggregateRating.ratingCount) {
+          issues.push({
+            severity: 'error',
+            message: 'AggregateRating missing reviewCount or ratingCount'
+          });
+        }
+      }
+    } else {
+      // Unknown schema type - just info
+      issues.push({
+        severity: 'info',
+        message: `Schema type "${type}" - no specific validation rules`
+      });
+    }
+
+    return issues;
+  }
+
+  _hasValue(value) {
+    if (value === undefined || value === null) return false;
+    if (typeof value === 'string' && value.trim() === '') return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    // Check for empty objects (but allow objects with at least one meaningful key)
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      const keys = Object.keys(value);
+      // If only has @type or @id, check if there's actual content
+      if (keys.length === 0) return false;
+      if (keys.length === 1 && (keys[0] === '@type' || keys[0] === '@id')) {
+        // Just a type or reference, check if it has meaningful value
+        return this._hasValue(value[keys[0]]);
+      }
+    }
+    return true;
+  }
+
+  _extractValue(value) {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value === 'string') return value.trim() || undefined;
+    if (typeof value === 'number' || typeof value === 'boolean') return value;
+    if (Array.isArray(value)) {
+      if (value.length === 0) return undefined;
+      // Return first meaningful value from array
+      for (const item of value) {
+        const extracted = this._extractValue(item);
+        if (extracted !== undefined) return value; // Return full array if any item is valid
+      }
+      return undefined;
+    }
+    if (typeof value === 'object') {
+      // Check for common patterns: {name: "..."}, {@id: "..."}, {value: "..."}, etc.
+      if (value.name) return this._extractValue(value.name);
+      if (value['@value']) return this._extractValue(value['@value']);
+      if (value.value) return this._extractValue(value.value);
+      if (value['@id']) return value['@id'];
+      if (value.url) return value.url;
+      if (value.text) return this._extractValue(value.text);
+      // If object has meaningful keys beyond @type and @id, consider it valid
+      const meaningfulKeys = Object.keys(value).filter(k => k !== '@type' && k !== '@id' && k !== '@context');
+      if (meaningfulKeys.length > 0) return value;
+    }
+    return undefined;
+  }
+
+  _getSchemaValue(data, field) {
+    // Direct field lookup
+    const value = data[field];
+
+    // For 'brand', handle multiple formats
+    if (field === 'brand') {
+      if (typeof value === 'string' && value.trim()) return value;
+      if (value && typeof value === 'object') {
+        // Brand object: {name: "...", @type: "Brand"}
+        if (value.name && typeof value.name === 'string' && value.name.trim()) return value.name;
+        // Brand reference: {@id: "..."}
+        if (value['@id']) return value['@id'];
+        // Check if brand object has any meaningful content
+        const extracted = this._extractValue(value);
+        if (extracted !== undefined) return extracted;
+      }
+      // Fallback: check manufacturer field
+      if (data.manufacturer) {
+        const mfgValue = this._extractValue(data.manufacturer);
+        if (mfgValue !== undefined) return mfgValue;
+      }
+      return undefined;
+    }
+
+    // For 'description', handle multiple formats
+    if (field === 'description') {
+      if (typeof value === 'string' && value.trim()) return value;
+      if (value && typeof value === 'object') {
+        const extracted = this._extractValue(value);
+        if (extracted !== undefined) return extracted;
+      }
+      if (Array.isArray(value) && value.length > 0) {
+        for (const desc of value) {
+          const extracted = this._extractValue(desc);
+          if (extracted !== undefined) return value;
+        }
+      }
+      return undefined;
+    }
+
+    // For 'sku', also check inside offers
+    if (field === 'sku') {
+      if (this._hasValue(value)) return value;
+      if (data.offers) {
+        const offers = Array.isArray(data.offers) ? data.offers : [data.offers];
+        for (const offer of offers) {
+          if (this._hasValue(offer.sku)) return offer.sku;
+        }
+      }
+      return undefined;
+    }
+
+    // For 'image', check various formats
+    if (field === 'image') {
+      if (typeof value === 'string' && value.trim()) return value;
+      if (Array.isArray(value) && value.length > 0) return value;
+      if (value && typeof value === 'object') {
+        if (value.url) return value.url;
+        if (value.contentUrl) return value.contentUrl;
+        if (value['@id']) return value['@id'];
+      }
+      return undefined;
+    }
+
+    // For other fields, use general extraction
+    return this._extractValue(value);
+  }
+
+  _isProductVariant(data) {
+    return data.inProductGroupWithID || data.isVariantOf || data['@id']?.includes('variant');
+  }
+
+  get _variantInheritedFields() {
+    return ['brand', 'manufacturer', 'logo', 'aggregateRating'];
+  }
+
+  get _schemaRules() {
+    return {
+      'Product': {
+        required: ['name'],
+        recommended: ['image', 'description', 'brand', 'offers'],
+        offerFields: ['price', 'priceCurrency', 'availability']
+      },
+      'ProductGroup': {
+        required: ['name'],
+        recommended: ['image', 'description', 'brand', 'hasVariant'],
+        offerFields: []
+      },
+      'Organization': {
+        required: ['name'],
+        recommended: ['url', 'logo', 'contactPoint', 'address', 'sameAs']
+      },
+      'LocalBusiness': {
+        required: ['name', 'address'],
+        recommended: ['telephone', 'openingHours', 'geo', 'image', 'priceRange']
+      },
+      'Article': {
+        required: ['headline', 'author', 'datePublished'],
+        recommended: ['image', 'publisher', 'dateModified', 'description']
+      },
+      'NewsArticle': {
+        required: ['headline', 'author', 'datePublished'],
+        recommended: ['image', 'publisher', 'dateModified', 'description']
+      },
+      'BlogPosting': {
+        required: ['headline', 'author', 'datePublished'],
+        recommended: ['image', 'publisher', 'dateModified', 'description']
+      },
+      'WebPage': {
+        required: ['name'],
+        recommended: ['description', 'url', 'breadcrumb']
+      },
+      'WebSite': {
+        required: ['name', 'url'],
+        recommended: ['potentialAction', 'publisher']
+      },
+      'BreadcrumbList': {
+        required: ['itemListElement'],
+        recommended: []
+      },
+      'FAQPage': {
+        required: ['mainEntity'],
+        recommended: []
+      },
+      'HowTo': {
+        required: ['name', 'step'],
+        recommended: ['image', 'totalTime', 'estimatedCost', 'supply', 'tool']
+      },
+      'Recipe': {
+        required: ['name', 'recipeIngredient', 'recipeInstructions'],
+        recommended: ['image', 'author', 'prepTime', 'cookTime', 'nutrition', 'recipeYield']
+      },
+      'Event': {
+        required: ['name', 'startDate', 'location'],
+        recommended: ['endDate', 'description', 'image', 'offers', 'performer', 'organizer']
+      },
+      'Person': {
+        required: ['name'],
+        recommended: ['image', 'jobTitle', 'worksFor', 'url', 'sameAs']
+      },
+      'Review': {
+        required: ['itemReviewed', 'reviewRating', 'author'],
+        recommended: ['reviewBody', 'datePublished']
+      },
+      'AggregateRating': {
+        required: ['ratingValue', 'reviewCount'],
+        recommended: ['bestRating', 'worstRating']
+      },
+      'VideoObject': {
+        required: ['name', 'description', 'thumbnailUrl', 'uploadDate'],
+        recommended: ['duration', 'contentUrl', 'embedUrl', 'interactionStatistic']
+      },
+      'ImageObject': {
+        required: ['contentUrl'],
+        recommended: ['name', 'description', 'width', 'height']
+      }
+    };
+  }
 }
 
 // Bootstrap
