@@ -14,7 +14,7 @@
 
   const capturedEvents = [];
   let schemaData = [];
-  let isPopupOpen = false;
+  let isPanelOpen = false;
   let isContextValid = true;
 
   // Check if extension context is still valid
@@ -35,9 +35,14 @@
         isContextValid = false;
         return Promise.resolve();
       }
-      return chrome.runtime.sendMessage(message).catch(() => {
-        // Context may have been invalidated
-        isContextValid = false;
+      return chrome.runtime.sendMessage(message).catch((error) => {
+        const msg = error?.message || '';
+        const isTransient = msg.includes('Could not establish connection') ||
+                            msg.includes('receiving end does not exist');
+        if (!isTransient) {
+          isContextValid = false;
+        }
+        // transient: skip this send, do not permanently disable
       });
     } catch (e) {
       isContextValid = false;
@@ -177,12 +182,12 @@
     capturedEvents.push(eventData);
 
     // Send to popup if open
-    if (isPopupOpen) {
+    if (isPanelOpen) {
       safeSendMessage({
         type: 'NEW_EVENT',
         event: eventData
       }).then(() => {}).catch(() => {
-        isPopupOpen = false;
+        isPanelOpen = false;
       });
     }
   });
@@ -499,7 +504,7 @@
         }
 
         if (message.type === 'GET_TRACKING_DATA') {
-          isPopupOpen = true;
+          isPanelOpen = true;
           scanForTrackingScripts(); // Re-scan when popup opens
           sendResponse({
             tracking: trackingData,
@@ -508,16 +513,21 @@
           return true;
         }
 
+        if (message.type === 'PANEL_OPEN') {
+          isPanelOpen = true;
+          return true;
+        }
+
+        if (message.type === 'PANEL_CLOSED') {
+          isPanelOpen = false;
+          return true;
+        }
+
         if (message.type === 'GET_SCHEMA_DATA') {
           scanForSchemaData(); // Re-scan when requested
           sendResponse({
             schema: schemaData
           });
-          return true;
-        }
-
-        if (message.type === 'POPUP_CLOSED') {
-          isPopupOpen = false;
           return true;
         }
 
