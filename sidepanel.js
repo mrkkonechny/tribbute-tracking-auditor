@@ -402,10 +402,316 @@ class OpsIQPanel {
     });
   }
 
-  // Stubs for methods added in Tasks 5, 7–8
-  runAudit() {}
-  renderAudit() {}
-  updateAuditBadge() {}
+  // ─── Audit tab ────────────────────────────────────────────────────────────
+
+  // GA4 ecommerce events and their required/recommended fields
+  get ga4EcommerceRules() {
+    return {
+      'view_item': {
+        required: ['items'],
+        recommended: ['currency', 'value'],
+        itemFields: ['item_id', 'item_name']
+      },
+      'view_item_list': {
+        required: ['items'],
+        recommended: ['item_list_id', 'item_list_name'],
+        itemFields: ['item_id', 'item_name']
+      },
+      'select_item': {
+        required: ['items'],
+        recommended: ['item_list_id', 'item_list_name'],
+        itemFields: ['item_id', 'item_name']
+      },
+      'add_to_cart': {
+        required: ['items', 'currency', 'value'],
+        recommended: [],
+        itemFields: ['item_id', 'item_name', 'price', 'quantity']
+      },
+      'remove_from_cart': {
+        required: ['items', 'currency', 'value'],
+        recommended: [],
+        itemFields: ['item_id', 'item_name']
+      },
+      'view_cart': {
+        required: ['items', 'currency', 'value'],
+        recommended: [],
+        itemFields: ['item_id', 'item_name', 'price', 'quantity']
+      },
+      'begin_checkout': {
+        required: ['items', 'currency', 'value'],
+        recommended: ['coupon'],
+        itemFields: ['item_id', 'item_name', 'price', 'quantity']
+      },
+      'add_shipping_info': {
+        required: ['items', 'currency', 'value'],
+        recommended: ['shipping_tier'],
+        itemFields: ['item_id', 'item_name']
+      },
+      'add_payment_info': {
+        required: ['items', 'currency', 'value'],
+        recommended: ['payment_type'],
+        itemFields: ['item_id', 'item_name']
+      },
+      'purchase': {
+        required: ['items', 'currency', 'value', 'transaction_id'],
+        recommended: ['tax', 'shipping', 'coupon'],
+        itemFields: ['item_id', 'item_name', 'price', 'quantity']
+      },
+      'refund': {
+        required: ['transaction_id'],
+        recommended: ['items', 'currency', 'value'],
+        itemFields: ['item_id', 'item_name']
+      }
+    };
+  }
+
+  // Facebook Pixel events and their required/recommended fields
+  get fbPixelRules() {
+    return {
+      'PageView': {
+        required: [],
+        recommended: []
+      },
+      'ViewContent': {
+        required: [],
+        recommended: ['content_ids', 'content_type', 'value', 'currency']
+      },
+      'Search': {
+        required: [],
+        recommended: ['search_string', 'content_ids', 'content_type']
+      },
+      'AddToCart': {
+        required: [],
+        recommended: ['content_ids', 'content_type', 'value', 'currency']
+      },
+      'AddToWishlist': {
+        required: [],
+        recommended: ['content_ids', 'content_type', 'value', 'currency']
+      },
+      'InitiateCheckout': {
+        required: [],
+        recommended: ['content_ids', 'content_type', 'value', 'currency', 'num_items']
+      },
+      'AddPaymentInfo': {
+        required: [],
+        recommended: ['content_ids', 'content_type', 'value', 'currency']
+      },
+      'Purchase': {
+        required: ['value', 'currency'],
+        recommended: ['content_ids', 'content_type', 'num_items']
+      },
+      'Lead': {
+        required: [],
+        recommended: ['value', 'currency']
+      },
+      'CompleteRegistration': {
+        required: [],
+        recommended: ['value', 'currency', 'status']
+      }
+    };
+  }
+
+  validateEvent(event) {
+    const issues = [];
+    const source = event.source;
+    const name = event.name;
+    const data = event.data || {};
+
+    // Check for GA4/dataLayer events
+    if (source === 'dataLayer' || source === 'gtag' || source === 'ga4') {
+      const rules = this.ga4EcommerceRules[name];
+
+      if (rules) {
+        // Check required fields
+        for (const field of rules.required) {
+          if (field === 'items') {
+            const items = data.items || data.ecommerce?.items;
+            if (!items || !Array.isArray(items) || items.length === 0) {
+              issues.push({
+                severity: 'error',
+                message: `Missing required "items" array`,
+                field: 'items'
+              });
+            } else {
+              // Validate item fields
+              items.forEach((item, index) => {
+                for (const itemField of rules.itemFields) {
+                  if (item[itemField] === undefined || item[itemField] === null || item[itemField] === '') {
+                    issues.push({
+                      severity: 'warning',
+                      message: `Item ${index + 1} missing "${itemField}"`,
+                      field: `items[${index}].${itemField}`
+                    });
+                  }
+                }
+              });
+            }
+          } else {
+            const value = data[field] ?? data.ecommerce?.[field];
+            if (value === undefined || value === null || value === '') {
+              issues.push({
+                severity: 'error',
+                message: `Missing required "${field}"`,
+                field: field
+              });
+            }
+          }
+        }
+
+        // Check recommended fields
+        for (const field of rules.recommended) {
+          const value = data[field] ?? data.ecommerce?.[field];
+          if (value === undefined || value === null || value === '') {
+            issues.push({
+              severity: 'warning',
+              message: `Missing recommended "${field}"`,
+              field: field
+            });
+          }
+        }
+
+        // Check for value/currency consistency
+        const value = data.value ?? data.ecommerce?.value;
+        const currency = data.currency ?? data.ecommerce?.currency;
+        if (value !== undefined && currency === undefined) {
+          issues.push({
+            severity: 'error',
+            message: `"value" provided without "currency"`,
+            field: 'currency'
+          });
+        }
+
+        // Check value is a number
+        if (value !== undefined && typeof value !== 'number') {
+          issues.push({
+            severity: 'warning',
+            message: `"value" should be a number, got ${typeof value}`,
+            field: 'value'
+          });
+        }
+      }
+
+      // General GA4 checks
+      if (data.items && Array.isArray(data.items)) {
+        data.items.forEach((item, index) => {
+          if (!item.item_id && !item.item_name) {
+            issues.push({
+              severity: 'error',
+              message: `Item ${index + 1} missing both "item_id" and "item_name" (at least one required)`,
+              field: `items[${index}]`
+            });
+          }
+        });
+      }
+    }
+
+    // Check for Facebook Pixel events
+    if (source === 'fbq' || source === 'fb') {
+      const rules = this.fbPixelRules[name];
+
+      if (rules) {
+        // Check required fields
+        for (const field of rules.required) {
+          if (data[field] === undefined || data[field] === null || data[field] === '') {
+            issues.push({
+              severity: 'error',
+              message: `Missing required "${field}"`,
+              field: field
+            });
+          }
+        }
+
+        // Check recommended fields
+        for (const field of rules.recommended) {
+          if (data[field] === undefined || data[field] === null || data[field] === '') {
+            issues.push({
+              severity: 'warning',
+              message: `Missing recommended "${field}"`,
+              field: field
+            });
+          }
+        }
+
+        // Check for value/currency consistency
+        if (data.value !== undefined && data.currency === undefined) {
+          issues.push({
+            severity: 'error',
+            message: `"value" provided without "currency"`,
+            field: 'currency'
+          });
+        }
+      }
+    }
+
+    // Check for empty event data
+    if (Object.keys(data).length === 0) {
+      issues.push({
+        severity: 'info',
+        message: 'Event has no parameters',
+        field: null
+      });
+    }
+
+    return issues;
+  }
+
+  runAudit() {
+    this.auditIssues = [];
+
+    this.capturedEvents.forEach(event => {
+      const issues = this.validateEvent(event);
+      if (issues && issues.length > 0) {
+        issues.forEach(issue => {
+          this.auditIssues.push({
+            event: event.name || event.event || event.eventName || 'unknown',
+            ...issue
+          });
+        });
+      }
+    });
+
+    this.renderAudit();
+    this.updateAuditBadge();
+  }
+
+  updateAuditBadge() {
+    const count = this.auditIssues.length;
+    const badge = document.getElementById('auditBadge');
+    const countEl = document.getElementById('auditCount');
+    const auditBtn = document.getElementById('nav-audit');
+    badge.textContent = count;
+    badge.classList.toggle('hidden', count === 0);
+    countEl.textContent = `${count} issue${count !== 1 ? 's' : ''}`;
+    // Update the button's aria-label so screen readers announce the count
+    auditBtn.setAttribute('aria-label', count > 0 ? `Audit — ${count} issue${count !== 1 ? 's' : ''}` : 'Audit');
+  }
+
+  renderAudit() {
+    const list = document.getElementById('auditList');
+
+    if (this.auditIssues.length === 0) {
+      list.innerHTML = '<p class="empty-state">No issues found.</p>';
+      return;
+    }
+
+    list.innerHTML = '';
+    this.auditIssues.forEach(issue => {
+      list.appendChild(this.createAuditItem(issue));
+    });
+  }
+
+  createAuditItem(issue) {
+    const item = document.createElement('div');
+    const isWarning = issue.severity === 'warning' || issue.severity === 'RECOMMENDED';
+    item.className = `audit-item${isWarning ? ' warning' : ''}`;
+    item.setAttribute('role', 'listitem');
+    item.innerHTML = `
+      <div class="audit-item-title">${this.escapeHtml(issue.event)}: ${this.escapeHtml(issue.message || issue.title || '')}</div>
+      ${issue.detail ? `<div class="audit-item-detail">${this.escapeHtml(issue.detail)}</div>` : ''}
+    `;
+    return item;
+  }
+
   loadSchemaData() {}
 }
 
