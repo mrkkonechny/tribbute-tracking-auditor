@@ -281,15 +281,18 @@ class OpsIQPanel {
       });
     }
 
-    if (events.length === 0) {
-      list.innerHTML = '<p class="empty-state">No events captured yet.</p>';
-      return;
-    }
-
-    // Preserve existing boundary markers; rebuild event items only
+    // Preserve existing boundary markers regardless of event count
     const markers = Array.from(list.querySelectorAll('.nav-boundary'));
     list.innerHTML = '';
     markers.forEach(m => list.appendChild(m));
+
+    if (events.length === 0) {
+      list.appendChild(Object.assign(document.createElement('p'), {
+        className: 'empty-state',
+        textContent: 'No events captured yet.'
+      }));
+      return;
+    }
 
     events.forEach(event => {
       list.appendChild(this.createEventItem(event));
@@ -367,7 +370,7 @@ class OpsIQPanel {
         });
       }
     } else if (type === 'audit') {
-      text = `opsIQ SCHEMA AUDIT REPORT\nGenerated: ${date}\nPage: ${this.currentUrl || '—'}\n\n`;
+      text = `opsIQ EVENT AUDIT REPORT\nGenerated: ${date}\nPage: ${this.currentUrl || '—'}\n\n`;
       if (this.auditIssues.length === 0) {
         text += 'No issues found.';
       } else {
