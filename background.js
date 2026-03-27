@@ -39,6 +39,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       type: 'PAGE_NAVIGATED',
       url: tab.url,
       tabId
-    }).catch(() => {}); // side panel may not be open
+    }).catch(() => {});
+    // Two expected failure modes:
+    // 1. Side panel is closed — message has no listener, silently ignored.
+    // 2. Content script not yet re-injected after navigation — sendMessage target
+    //    is the content script, not the side panel; content.js handles boundary markers.
+    //    The content script re-runs at document_start so it's ready before 'complete'.
   }
 });

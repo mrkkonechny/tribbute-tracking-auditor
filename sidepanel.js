@@ -30,10 +30,13 @@ class OpsIQPanel {
   connectPort() {
     this.port = chrome.runtime.connect({ name: 'opsiq-panel' });
     this.port.onDisconnect.addListener(() => {
-      // SW restarted — reconnect
+      // SW restarted — reconnect after a brief pause to let the worker restart.
+      // On initial connect this.currentTabId is null (handshake is sent by loadData).
+      // On reconnect after SW restart, this.currentTabId is already populated and
+      // sendHandshake fires below to re-establish activePanelTabId in background.js.
       setTimeout(() => this.connectPort(), 100);
     });
-    // Re-send handshake after SW restart so background knows the correct tab
+    // Only fires on SW-restart reconnect (currentTabId null on first connect)
     if (this.currentTabId) this.sendHandshake(this.currentTabId);
   }
 
@@ -205,39 +208,29 @@ class OpsIQPanel {
 
     // GTM: tracking.gtm is an array of IDs (e.g. ['GTM-XXXXX'])
     const gtmIds = tracking.gtm || [];
-    if (gtmIds.length > 0) {
-      items.push({ label: `GTM: ${gtmIds.map(id => this.escapeHtml(id)).join(', ')}`, found: true });
-    } else {
-      items.push({ label: 'GTM: not found', found: false });
-    }
+    items.push({ prefix: 'GTM', ids: gtmIds, found: gtmIds.length > 0 });
 
     // GA4: tracking.ga4 is an array of IDs (e.g. ['G-XXXXX'])
     const ga4Ids = tracking.ga4 || [];
-    if (ga4Ids.length > 0) {
-      items.push({ label: `GA4: ${ga4Ids.map(id => this.escapeHtml(id)).join(', ')}`, found: true });
-    } else {
-      items.push({ label: 'GA4: not found', found: false });
-    }
+    items.push({ prefix: 'GA4', ids: ga4Ids, found: ga4Ids.length > 0 });
 
     // Google Ads: key is 'gads' in content.js
     const gadsIds = tracking.gads || [];
-    if (gadsIds.length > 0) {
-      items.push({ label: `Google Ads: ${gadsIds.map(id => this.escapeHtml(id)).join(', ')}`, found: true });
-    } else {
-      items.push({ label: 'Google Ads: not found', found: false });
-    }
+    items.push({ prefix: 'Google Ads', ids: gadsIds, found: gadsIds.length > 0 });
 
     // Facebook Pixel: key is 'fb' in content.js
     const fbIds = tracking.fb || [];
-    if (fbIds.length > 0) {
-      items.push({ label: `Facebook Pixel: ${fbIds.map(id => this.escapeHtml(id)).join(', ')}`, found: true });
-    } else {
-      items.push({ label: 'Facebook Pixel: not found', found: false });
-    }
+    items.push({ prefix: 'Facebook Pixel', ids: fbIds, found: fbIds.length > 0 });
 
-    content.innerHTML = items.map(item =>
-      `<span class="tracking-tag ${item.found ? '' : 'not-found'}">${item.label}</span>`
-    ).join('');
+    // Build tags via DOM (not innerHTML) so each ID is text-safe regardless of prefix changes
+    content.innerHTML = '';
+    items.forEach(item => {
+      const tag = document.createElement('span');
+      tag.className = `tracking-tag${item.found ? '' : ' not-found'}`;
+      const idText = item.found ? item.ids.join(', ') : 'not found';
+      tag.textContent = `${item.prefix}: ${idText}`;
+      content.appendChild(tag);
+    });
 
     const foundCount = items.filter(i => i.found).length;
     const summaryText = foundCount > 0
@@ -258,12 +251,31 @@ class OpsIQPanel {
 
   // ─── Events tab ───────────────────────────────────────────────────────────
   addEvent(event) {
+    const list = document.getElementById('eventsList');
+    const filterValue = document.getElementById('eventFilter').value;
+
     this.capturedEvents.push(event);
-    // Enforce cap: drop oldest
+
+    // Enforce cap: drop oldest event and remove its DOM node
     if (this.capturedEvents.length > EVENT_CAP) {
       this.capturedEvents.shift();
+      const firstItem = list.querySelector('.event-item');
+      if (firstItem) firstItem.remove();
     }
-    this.renderEvents();
+
+    // Remove empty-state placeholder on first event
+    const placeholder = list.querySelector('.empty-state');
+    if (placeholder) placeholder.remove();
+
+    // Append only the new item (preserves scroll position and expanded payloads)
+    const passes = filterValue === 'all'
+      || (filterValue === 'datalayer' && event.source === 'dataLayer')
+      || (filterValue === 'gtag' && event.source === 'gtag')
+      || (filterValue === 'fbq' && event.source === 'fbq');
+    if (passes) {
+      list.appendChild(this.createEventItem(event));
+    }
+
     this.runAudit();
   }
 
