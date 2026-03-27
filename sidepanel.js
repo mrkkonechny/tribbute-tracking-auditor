@@ -203,34 +203,34 @@ class OpsIQPanel {
 
     const items = [];
 
-    // GTM
-    if (tracking.gtm?.found) {
-      const ids = (tracking.gtm.ids || []).map(id => this.escapeHtml(id)).join(', ');
-      items.push({ label: `GTM: ${ids || 'found'}`, found: true });
+    // GTM: tracking.gtm is an array of IDs (e.g. ['GTM-XXXXX'])
+    const gtmIds = tracking.gtm || [];
+    if (gtmIds.length > 0) {
+      items.push({ label: `GTM: ${gtmIds.map(id => this.escapeHtml(id)).join(', ')}`, found: true });
     } else {
       items.push({ label: 'GTM: not found', found: false });
     }
 
-    // GA4
-    if (tracking.ga4?.found) {
-      const ids = (tracking.ga4.ids || []).map(id => this.escapeHtml(id)).join(', ');
-      items.push({ label: `GA4: ${ids || 'found'}`, found: true });
+    // GA4: tracking.ga4 is an array of IDs (e.g. ['G-XXXXX'])
+    const ga4Ids = tracking.ga4 || [];
+    if (ga4Ids.length > 0) {
+      items.push({ label: `GA4: ${ga4Ids.map(id => this.escapeHtml(id)).join(', ')}`, found: true });
     } else {
       items.push({ label: 'GA4: not found', found: false });
     }
 
-    // Google Ads
-    if (tracking.googleAds?.found) {
-      const ids = (tracking.googleAds.ids || []).map(id => this.escapeHtml(id)).join(', ');
-      items.push({ label: `Google Ads: ${ids || 'found'}`, found: true });
+    // Google Ads: key is 'gads' in content.js
+    const gadsIds = tracking.gads || [];
+    if (gadsIds.length > 0) {
+      items.push({ label: `Google Ads: ${gadsIds.map(id => this.escapeHtml(id)).join(', ')}`, found: true });
     } else {
       items.push({ label: 'Google Ads: not found', found: false });
     }
 
-    // Facebook Pixel
-    if (tracking.facebook?.found) {
-      const ids = (tracking.facebook.ids || []).map(id => this.escapeHtml(id)).join(', ');
-      items.push({ label: `Facebook Pixel: ${ids || 'found'}`, found: true });
+    // Facebook Pixel: key is 'fb' in content.js
+    const fbIds = tracking.fb || [];
+    if (fbIds.length > 0) {
+      items.push({ label: `Facebook Pixel: ${fbIds.map(id => this.escapeHtml(id)).join(', ')}`, found: true });
     } else {
       items.push({ label: 'Facebook Pixel: not found', found: false });
     }
@@ -311,7 +311,7 @@ class OpsIQPanel {
                      : 'badge-datalayer';
 
     const eventName = this.escapeHtml(
-      event.event || event.eventName || event[0] || 'unknown'
+      event.name || event.event || event.eventName || 'unknown'
     );
     const time = event.timestamp
       ? new Date(event.timestamp).toLocaleTimeString()
@@ -705,8 +705,11 @@ class OpsIQPanel {
     const isWarning = issue.severity === 'warning' || issue.severity === 'RECOMMENDED';
     item.className = `audit-item${isWarning ? ' warning' : ''}`;
     item.setAttribute('role', 'listitem');
+    const severityLabel = isWarning ? '[!] '
+                        : issue.severity === 'info' ? '[i] '
+                        : '[✗] ';
     item.innerHTML = `
-      <div class="audit-item-title">${this.escapeHtml(issue.event)}: ${this.escapeHtml(issue.message || issue.title || '')}</div>
+      <div class="audit-item-title"><span aria-hidden="true">${severityLabel}</span>${this.escapeHtml(issue.event)}: ${this.escapeHtml(issue.message || issue.title || '')}</div>
       ${issue.detail ? `<div class="audit-item-detail">${this.escapeHtml(issue.detail)}</div>` : ''}
     `;
     return item;
@@ -714,12 +717,14 @@ class OpsIQPanel {
 
   // ─── Schema tab ───────────────────────────────────────────────────────────
   async loadSchemaData() {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) return;
+    if (!this.currentTabId) return;
 
     try {
-      const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_SCHEMA_DATA' });
-      this.schemaData = response?.schema || null;
+      const response = await chrome.tabs.sendMessage(this.currentTabId, { type: 'GET_SCHEMA_DATA' });
+      const rawSchema = response?.schema;
+      this.schemaData = rawSchema
+        ? { schemas: Array.isArray(rawSchema) ? rawSchema : [rawSchema], opportunities: [] }
+        : null;
       this.renderSchema();
     } catch (e) {
       document.getElementById('schemaList').innerHTML =
