@@ -709,7 +709,7 @@ class OpsIQPanel {
                         : issue.severity === 'info' ? '[i] '
                         : '[✗] ';
     item.innerHTML = `
-      <div class="audit-item-title"><span aria-hidden="true">${severityLabel}</span>${this.escapeHtml(issue.event)}: ${this.escapeHtml(issue.message || issue.title || '')}</div>
+      <div class="audit-item-title">${severityLabel}${this.escapeHtml(issue.event)}: ${this.escapeHtml(issue.message || issue.title || '')}</div>
       ${issue.detail ? `<div class="audit-item-detail">${this.escapeHtml(issue.detail)}</div>` : ''}
     `;
     return item;
