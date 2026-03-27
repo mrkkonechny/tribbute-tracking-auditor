@@ -33,8 +33,8 @@ class OpsIQPanel {
       // SW restarted — reconnect
       setTimeout(() => this.connectPort(), 100);
     });
-    // Send handshake once we know the active tab (loadData runs async, so send
-    // handshake as soon as we have the tabId — see sendHandshake())
+    // Re-send handshake after SW restart so background knows the correct tab
+    if (this.currentTabId) this.sendHandshake(this.currentTabId);
   }
 
   sendHandshake(tabId) {
@@ -170,6 +170,7 @@ class OpsIQPanel {
   }
 
   clearEvents() {
+    document.getElementById('eventsList').innerHTML = '';
     if (this.currentTabId) {
       chrome.tabs.sendMessage(this.currentTabId, { type: 'CLEAR_EVENTS' }).catch(() => {});
     }
