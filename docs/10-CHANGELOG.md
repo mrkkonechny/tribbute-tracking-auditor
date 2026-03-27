@@ -18,6 +18,29 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 
 ---
 
+## [1.3.0] — 2026-03-26
+
+### Added
+- Side Panel UI (sidepanel.html/css/js) replaces the popup — full browser height, persistent across page navigations
+- Bottom navigation bar with Events, Audit, Schema tabs (roving tabindex keyboard navigation)
+- Collapsible tracking detection bar in sticky header with current page URL
+- Page navigation boundary markers in the events list (inserted on `chrome.tabs.onUpdated`)
+- Event cap (EVENT_CAP = 200) in sidepanel.js — oldest events dropped when cap exceeded
+- Lazy payload rendering in events list — JSON payloads expand only on click
+- Schema tab: stacked "Schema Validation" + "Implementation Opportunities" sub-sections
+- WCAG 2.1 AA: `:focus-visible` on all interactive elements; schema status uses `[✓]/[✗]/[!]` text prefixes
+- DEC-0004: Architectural decision to migrate from popup to side panel
+
+### Fixed
+- BUG-0002: Added `"tabs"` permission to manifest.json (chrome.tabs.query was failing silently)
+- BUG-0003: `safeSendMessage` in content.js now distinguishes transient SW restart errors from fatal context invalidation; transient errors no longer permanently disable event capture
+- BUG-0004: Replaced unreliable `isPopupOpen + window.unload` with port-based `isPanelOpen` detection (background.js relays PANEL_OPEN/PANEL_CLOSED via chrome.runtime.onConnect)
+
+### Removed
+- popup.html, popup.css, popup.js removed from manifest.json (files kept on disk for reference)
+
+---
+
 ## v1.2.0 — 2026-03-26
 
 ### Added

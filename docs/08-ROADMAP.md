@@ -36,15 +36,15 @@ Strategic feature plan and working backlog. Most recent entries at the top withi
 - **Related:** BUG-0001
 
 ### ROAD-0002 — Add `tabs` permission to manifest.json
-- **Status:** Approved
+- **Status:** Completed — Fixed in manifest.json v1.3.0 (side panel migration, 2026-03-26)
 - **Type:** Bug Fix
 - **Priority:** P1 (High)
 - **Date Added:** 2026-03-26
 - **Scope:** Small (< 1 day)
 - **Description:** `chrome.tabs.query()` is called 7 times in popup.js but only `activeTab` and `scripting` are declared. Without `tabs`, `tab.url` returns `undefined` in generated reports.
 - **Acceptance Criteria:**
-  - [ ] `"tabs"` added to `permissions` array in manifest.json
-  - [ ] Generated reports show the correct page URL
+  - [x] `"tabs"` added to `permissions` array in manifest.json
+  - [x] Generated reports show the correct page URL
 - **Related:** BUG-0002
 
 ### ROAD-0003 — Fix isContextValid permanent-disable on transient SW restart
