@@ -256,14 +256,154 @@ class OpsIQPanel {
     );
   }
 
-  // Stubs for methods added in Tasks 5–8
-  addEvent(event) {}
-  renderEvents() {}
+  // ─── Events tab ───────────────────────────────────────────────────────────
+  addEvent(event) {
+    this.capturedEvents.push(event);
+    // Enforce cap: drop oldest
+    if (this.capturedEvents.length > EVENT_CAP) {
+      this.capturedEvents.shift();
+    }
+    this.renderEvents();
+    this.runAudit();
+  }
+
+  renderEvents() {
+    const list = document.getElementById('eventsList');
+    const filterValue = document.getElementById('eventFilter').value;
+
+    let events = this.capturedEvents;
+    if (filterValue !== 'all') {
+      events = events.filter(e => {
+        if (filterValue === 'datalayer') return e.source === 'dataLayer';
+        if (filterValue === 'gtag') return e.source === 'gtag';
+        if (filterValue === 'fbq') return e.source === 'fbq';
+        return true;
+      });
+    }
+
+    if (events.length === 0) {
+      list.innerHTML = '<p class="empty-state">No events captured yet.</p>';
+      return;
+    }
+
+    // Preserve existing boundary markers; rebuild event items only
+    const markers = Array.from(list.querySelectorAll('.nav-boundary'));
+    list.innerHTML = '';
+    markers.forEach(m => list.appendChild(m));
+
+    events.forEach(event => {
+      list.appendChild(this.createEventItem(event));
+    });
+  }
+
+  createEventItem(event) {
+    const item = document.createElement('div');
+    item.className = 'event-item';
+    item.setAttribute('role', 'listitem');
+
+    const source = event.source || 'unknown';
+    const badgeClass = source === 'dataLayer' ? 'badge-datalayer'
+                     : source === 'gtag'      ? 'badge-gtag'
+                     : source === 'fbq'       ? 'badge-fbq'
+                     : 'badge-datalayer';
+
+    const eventName = this.escapeHtml(
+      event.event || event.eventName || event[0] || 'unknown'
+    );
+    const time = event.timestamp
+      ? new Date(event.timestamp).toLocaleTimeString()
+      : '';
+
+    const header = document.createElement('div');
+    header.className = 'event-header';
+    header.setAttribute('tabindex', '0');
+    header.setAttribute('role', 'button');
+    header.setAttribute('aria-expanded', 'false');
+    header.innerHTML = `
+      <span class="event-type-badge ${this.escapeHtml(badgeClass)}">${this.escapeHtml(source)}</span>
+      <span class="event-name">${eventName}</span>
+      <span class="event-time">${this.escapeHtml(time)}</span>
+      <span class="event-expand-icon" aria-hidden="true">▶</span>
+    `;
+
+    const payload = document.createElement('div');
+    payload.className = 'event-payload';
+    payload.setAttribute('aria-hidden', 'true');
+
+    // Lazy: payload rendered only on first expand
+    let payloadRendered = false;
+    const toggleExpand = () => {
+      const expanded = item.classList.toggle('expanded');
+      header.setAttribute('aria-expanded', String(expanded));
+      payload.setAttribute('aria-hidden', String(!expanded));
+      if (expanded && !payloadRendered) {
+        payload.textContent = JSON.stringify(event, null, 2);
+        payloadRendered = true;
+      }
+    };
+
+    header.addEventListener('click', toggleExpand);
+    header.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpand(); }
+    });
+
+    item.appendChild(header);
+    item.appendChild(payload);
+    return item;
+  }
+
+  // ─── Report generation ────────────────────────────────────────────────────
+  copyReport(type) {
+    let text = '';
+    const date = new Date().toLocaleString();
+
+    if (type === 'events') {
+      text = `opsIQ TRACKING AUDIT REPORT\nGenerated: ${date}\nPage: ${this.currentUrl || '—'}\n\n`;
+      if (this.capturedEvents.length === 0) {
+        text += 'No events captured.';
+      } else {
+        this.capturedEvents.forEach((e, i) => {
+          text += `--- Event ${i + 1} ---\n${JSON.stringify(e, null, 2)}\n\n`;
+        });
+      }
+    } else if (type === 'audit') {
+      text = `opsIQ SCHEMA AUDIT REPORT\nGenerated: ${date}\nPage: ${this.currentUrl || '—'}\n\n`;
+      if (this.auditIssues.length === 0) {
+        text += 'No issues found.';
+      } else {
+        this.auditIssues.forEach((issue, i) => {
+          text += `${i + 1}. [${issue.severity || 'ISSUE'}] ${issue.event || ''}\n   ${issue.message}\n\n`;
+        });
+      }
+    } else if (type === 'schema') {
+      text = `opsIQ TRACKING AUDITOR REPORT\nGenerated: ${date}\nPage: ${this.currentUrl || '—'}\n\n`;
+      if (this.schemaData) {
+        (this.schemaData.schemas || []).forEach(s => {
+          text += `Schema: ${s.type || 'Unknown'} (${s.format || ''})\n`;
+          (s.issues || []).forEach(issue => { text += `  - ${issue}\n`; });
+          text += '\n';
+        });
+      } else {
+        text += 'No schema data loaded.';
+      }
+    }
+
+    navigator.clipboard.writeText(text).catch(() => {
+      // Fallback for environments where clipboard API is unavailable
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+  }
+
+  // Stubs for methods added in Tasks 5, 7–8
   runAudit() {}
   renderAudit() {}
   updateAuditBadge() {}
   loadSchemaData() {}
-  copyReport(type) {}
 }
 
 // Bootstrap
