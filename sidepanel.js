@@ -719,10 +719,8 @@ class OpsIQPanel {
 
     try {
       const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_SCHEMA_DATA' });
-      if (response?.schema) {
-        this.schemaData = response.schema;
-        this.renderSchema();
-      }
+      this.schemaData = response?.schema || null;
+      this.renderSchema();
     } catch (e) {
       document.getElementById('schemaList').innerHTML =
         '<p class="empty-state">Could not load schema data. Try reloading the page.</p>';
