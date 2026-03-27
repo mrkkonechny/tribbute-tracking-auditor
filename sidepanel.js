@@ -180,9 +180,83 @@ class OpsIQPanel {
     this.renderAudit();
   }
 
+  // ─── XSS escape ───────────────────────────────────────────────────────────
+  escapeHtml(str) {
+    if (str == null) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+  }
+
+  // ─── Tracking detection ───────────────────────────────────────────────────
+  renderTracking(tracking) {
+    const content = document.getElementById('trackingContent');
+    const summary = document.getElementById('trackingSummary');
+    const toggle = document.getElementById('trackingToggle');
+
+    if (!tracking) {
+      content.innerHTML = '<span class="tracking-placeholder">No tracking data.</span>';
+      summary.textContent = 'No tracking detected';
+      toggle.setAttribute('aria-label', 'Tracking detection — No tracking detected');
+      return;
+    }
+
+    const items = [];
+
+    // GTM
+    if (tracking.gtm?.found) {
+      const ids = (tracking.gtm.ids || []).map(id => this.escapeHtml(id)).join(', ');
+      items.push({ label: `GTM: ${ids || 'found'}`, found: true });
+    } else {
+      items.push({ label: 'GTM: not found', found: false });
+    }
+
+    // GA4
+    if (tracking.ga4?.found) {
+      const ids = (tracking.ga4.ids || []).map(id => this.escapeHtml(id)).join(', ');
+      items.push({ label: `GA4: ${ids || 'found'}`, found: true });
+    } else {
+      items.push({ label: 'GA4: not found', found: false });
+    }
+
+    // Google Ads
+    if (tracking.googleAds?.found) {
+      const ids = (tracking.googleAds.ids || []).map(id => this.escapeHtml(id)).join(', ');
+      items.push({ label: `Google Ads: ${ids || 'found'}`, found: true });
+    } else {
+      items.push({ label: 'Google Ads: not found', found: false });
+    }
+
+    // Facebook Pixel
+    if (tracking.facebook?.found) {
+      const ids = (tracking.facebook.ids || []).map(id => this.escapeHtml(id)).join(', ');
+      items.push({ label: `Facebook Pixel: ${ids || 'found'}`, found: true });
+    } else {
+      items.push({ label: 'Facebook Pixel: not found', found: false });
+    }
+
+    content.innerHTML = items.map(item =>
+      `<span class="tracking-tag ${item.found ? '' : 'not-found'}">${item.label}</span>`
+    ).join('');
+
+    const foundCount = items.filter(i => i.found).length;
+    const summaryText = foundCount > 0
+      ? `${foundCount} tracking tool${foundCount > 1 ? 's' : ''} detected`
+      : 'No tracking detected';
+    summary.textContent = summaryText;
+    toggle.setAttribute('aria-label', `Tracking detection — ${summaryText}`);
+  }
+
+  renderTrackingError() {
+    document.getElementById('trackingContent').innerHTML =
+      '<span class="tracking-placeholder">Could not read tracking data. Try reloading the page.</span>';
+    document.getElementById('trackingSummary').textContent = 'Error reading page';
+    document.getElementById('trackingToggle').setAttribute(
+      'aria-label', 'Tracking detection — Error reading page'
+    );
+  }
+
   // Stubs for methods added in Tasks 5–8
-  renderTracking(tracking) {}
-  renderTrackingError() {}
   addEvent(event) {}
   renderEvents() {}
   runAudit() {}
