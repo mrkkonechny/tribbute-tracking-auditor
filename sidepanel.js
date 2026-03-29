@@ -10,6 +10,7 @@ class OpsIQPanel {
     this.auditIssues = [];
     this.schemaData = null;
     this.seoData = null;
+    this._seoLoadToken = 0;
     this.port = null;
     this.currentUrl = null;
     this.currentTabId = null;
@@ -175,6 +176,9 @@ class OpsIQPanel {
     marker.textContent = `navigated to ${shortUrl}`;
     list.appendChild(marker);
     this.seoData = null;
+    this._seoLoadToken++;
+    document.getElementById('seoSignals').innerHTML = '<p class="empty-state">Loading…</p>';
+    document.getElementById('pageSpeedResults').innerHTML = '<p class="ps-loading">Waiting for tab to activate…</p>';
     this.updateHeaderUrl(url);
   }
 
@@ -1382,18 +1386,22 @@ class OpsIQPanel {
   // ─── SEO tab ──────────────────────────────────────────────────────────────
   async loadSEOData() {
     if (!this.currentTabId) return;
+    const token = ++this._seoLoadToken;
 
     try {
       const response = await chrome.tabs.sendMessage(this.currentTabId, { type: 'GET_SEO_DATA' });
+      if (token !== this._seoLoadToken) return;
       if (response?.seo) {
         this.seoData = response.seo;
         this.renderSEOSignals(this.seoData);
       }
     } catch (e) {
+      if (token !== this._seoLoadToken) return;
       document.getElementById('seoSignals').innerHTML =
         '<p class="empty-state">Could not load SEO data. Try reloading the page.</p>';
     }
 
+    if (token !== this._seoLoadToken) return;
     if (this.currentUrl) {
       this.loadPageSpeed(this.currentUrl);
     }
