@@ -242,6 +242,16 @@ html, body {
   color: var(--text-secondary);
 }
 
+/* ─── Tab blurb ─── */
+.tab-blurb {
+  padding: var(--space-xs) var(--space-md) var(--space-sm);
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
 /* ─── Events list ─── */
 .events-list {
   flex: 1;
@@ -468,6 +478,172 @@ html, body {
   font-size: 11px;
   color: var(--text-secondary);
   margin-top: 2px;
+}
+
+/* ─── SEO tab ─── */
+.seo-stacked {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.seo-sub-section { flex-shrink: 0; }
+
+.seo-signals-list { padding: var(--space-sm) 0; }
+
+.seo-signal-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+}
+
+.seo-signal-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  flex-shrink: 0;
+  min-width: 100px;
+}
+
+.seo-signal-value {
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seo-signal-status {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.seo-signal-status.status-good { color: var(--success); }
+.seo-signal-status.status-warn { color: var(--warning); }
+.seo-signal-status.status-bad  { color: var(--error); }
+
+/* ─── PageSpeed ─── */
+.ps-results { padding: var(--space-sm) var(--space-md); }
+
+.ps-loading {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+  padding: var(--space-xl) 0;
+}
+
+.ps-scores {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-sm);
+}
+
+.ps-score-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+
+.ps-score-chip.ps-score-good { border-color: var(--success); color: var(--success); }
+.ps-score-chip.ps-score-warn { border-color: var(--warning); color: var(--warning); }
+.ps-score-chip.ps-score-bad  { border-color: var(--error);   color: var(--error); }
+
+.ps-score-num { font-size: 17px; font-weight: 700; line-height: 1; }
+.ps-score-label { font-size: 9px; text-align: center; line-height: 1.2; margin-top: 2px; color: var(--text-secondary); }
+
+.ps-cwv-row {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  padding: var(--space-xs) 0;
+  border-top: 1px solid var(--border-color);
+  margin-top: var(--space-xs);
+}
+
+.ps-cwv-item { font-size: 11px; color: var(--text-secondary); }
+
+/* ─── Tracking recommendations ─── */
+.tracking-recs {
+  width: 100%;
+  margin-top: var(--space-sm);
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-xs);
+}
+
+.tracking-rec-item { padding: var(--space-xs) 0; }
+
+.tracking-rec-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.tracking-rec-list {
+  margin: var(--space-xs) 0 var(--space-xs) var(--space-lg);
+  list-style: disc;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ─── Schema content extraction ─── */
+.schema-content-toggle-wrap { margin-top: var(--space-xs); }
+
+.schema-content-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1.5;
+}
+
+.schema-content-toggle:hover { color: var(--accent); }
+
+.schema-content-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.schema-content-body {
+  margin-top: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+}
+
+.schema-content-row {
+  display: flex;
+  gap: var(--space-sm);
+  font-size: 11px;
+  padding: 1px 0;
+}
+
+.schema-content-key {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.schema-content-val {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
 }
 
 /* ─── Empty state ─── */

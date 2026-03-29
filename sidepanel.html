@@ -45,6 +45,7 @@
           <button id="clearEvents" class="toolbar-btn">Clear</button>
           <button id="copyEvents" class="toolbar-btn">Copy All</button>
         </div>
+        <p class="tab-blurb">Real-time events captured from dataLayer pushes, gtag() calls, and fbq() calls as they fire on this page. Click any event to expand its full payload.</p>
         <div id="eventsList" class="events-list" role="list" aria-label="Captured events">
           <p class="empty-state">No events captured yet.</p>
         </div>
@@ -55,6 +56,7 @@
           <span class="audit-count" id="auditCount">0 issues</span>
           <button id="copyAudit" class="toolbar-btn">Copy Audit</button>
         </div>
+        <p class="tab-blurb">Validation issues found in captured events against GA4 ecommerce and Facebook Pixel field requirements. Issues update as new events arrive.</p>
         <div id="auditList" class="audit-list" role="list" aria-label="Audit issues">
           <p class="empty-state">No issues found.</p>
         </div>
@@ -64,6 +66,7 @@
         <div class="section-toolbar">
           <button id="copySchema" class="toolbar-btn">Copy Schema</button>
         </div>
+        <p class="tab-blurb">Structured data detected on this page — JSON-LD, Microdata, and RDFa — validated against schema.org requirements. Implementation opportunities shown below.</p>
         <div class="schema-stacked">
           <div class="schema-sub-section">
             <h2 class="sub-section-title">Schema Validation</h2>
@@ -75,6 +78,27 @@
             <h2 class="sub-section-title">Implementation Opportunities</h2>
             <div id="opportunitiesList" class="opportunities-list" role="list" aria-label="Schema opportunities">
               <p class="empty-state">No recommendations.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-seo" class="tab-section hidden" role="tabpanel" aria-labelledby="nav-seo" tabindex="-1">
+        <div class="section-toolbar">
+          <span class="audit-count" id="seoToolbarLabel">On-Page + PageSpeed</span>
+        </div>
+        <p class="tab-blurb">On-page SEO signals extracted from this page's metadata, headings, and link structure. PageSpeed scores are fetched live from Google's Lighthouse API.</p>
+        <div class="seo-stacked">
+          <div class="seo-sub-section">
+            <h2 class="sub-section-title">On-Page Signals</h2>
+            <div id="seoSignals" class="seo-signals-list">
+              <p class="empty-state">Loading…</p>
+            </div>
+          </div>
+          <div class="seo-sub-section">
+            <h2 class="sub-section-title">PageSpeed Insights</h2>
+            <div id="pageSpeedResults" class="ps-results">
+              <p class="ps-loading">Waiting for tab to activate…</p>
             </div>
           </div>
         </div>
@@ -100,6 +124,11 @@
               aria-selected="false" aria-controls="tab-schema" tabindex="-1">
         <span class="nav-icon" aria-hidden="true">🏷</span>
         <span class="nav-label">Schema</span>
+      </button>
+      <button class="nav-btn" id="nav-seo" role="tab" data-tab="seo"
+              aria-selected="false" aria-controls="tab-seo" tabindex="-1">
+        <span class="nav-icon" aria-hidden="true">🔍</span>
+        <span class="nav-label">SEO</span>
       </button>
     </div>
 
