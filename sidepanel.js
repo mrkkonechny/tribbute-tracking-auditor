@@ -1512,6 +1512,10 @@ class OpsIQPanel {
 
     try {
       const res = await fetch(apiUrl);
+      if (res.status === 429) {
+        resultsEl.innerHTML = '<p class="ps-loading">PageSpeed API quota exceeded. Try again in a moment.</p>';
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       this.renderPageSpeed(data, resultsEl);
