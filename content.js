@@ -493,6 +493,59 @@
   // Re-scan schema after delay for dynamic content
   setTimeout(scanForSchemaData, 2000);
 
+  // ============================================
+  // SEO DATA DETECTION
+  // ============================================
+
+  function scanForSEOData() {
+    const getMeta = (selector) =>
+      document.querySelector(selector)?.getAttribute('content') ?? null;
+
+    const openGraph = {};
+    document.querySelectorAll('meta[property^="og:"]').forEach(el => {
+      const prop = el.getAttribute('property');
+      if (prop) openGraph[prop] = el.getAttribute('content') || '';
+    });
+
+    const twitterCards = {};
+    document.querySelectorAll('meta[name^="twitter:"]').forEach(el => {
+      const name = el.getAttribute('name');
+      if (name) twitterCards[name] = el.getAttribute('content') || '';
+    });
+
+    const hreflang = Array.from(
+      document.querySelectorAll('link[rel="alternate"][hreflang]')
+    )
+      .filter(el => el.getAttribute('hreflang'))
+      .map(el => ({ lang: el.getAttribute('hreflang'), href: el.getAttribute('href') || '' }));
+
+    const imgs = Array.from(document.querySelectorAll('img'));
+    const links = Array.from(document.querySelectorAll('a[href]'));
+    const origin = location.origin;
+
+    return {
+      title:       document.title || null,
+      description: getMeta('meta[name="description"]'),
+      canonical:   document.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? null,
+      robots:      getMeta('meta[name="robots"]'),
+      viewport:    getMeta('meta[name="viewport"]'),
+      h1s:         Array.from(document.querySelectorAll('h1')).slice(0, 5).map(el => el.textContent.trim()),
+      h2Count:     document.querySelectorAll('h2').length,
+      openGraph,
+      twitterCards,
+      hreflang,
+      // Empty alt="" is valid for decorative images; count hasAttribute('alt') not alt !== ''
+      imageAltCoverage: {
+        total:   imgs.length,
+        withAlt: imgs.filter(img => img.hasAttribute('alt')).length
+      },
+      linkCounts: {
+        internal: links.filter(a => { try { return new URL(a.href).origin === origin; } catch { return false; } }).length,
+        external: links.filter(a => { try { return new URL(a.href).origin !== origin; } catch { return false; } }).length
+      }
+    };
+  }
+
   // Listen for messages from popup
   // Only add listener if context is valid
   if (checkContext()) {
@@ -534,6 +587,11 @@
         if (message.type === 'CLEAR_EVENTS') {
           capturedEvents.length = 0;
           sendResponse({ success: true });
+          return true;
+        }
+
+        if (message.type === 'GET_SEO_DATA') {
+          sendResponse({ seo: scanForSEOData() });
           return true;
         }
       });
