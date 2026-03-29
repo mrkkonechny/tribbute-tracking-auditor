@@ -888,7 +888,7 @@ class OpsIQPanel {
       let cur = obj;
       for (const p of parts) {
         if (cur == null) return null;
-        if (Array.isArray(cur)) cur = cur[0];
+        if (Array.isArray(cur)) { cur = cur[0]; if (cur == null) return null; }
         cur = cur[p];
       }
       if (Array.isArray(cur)) cur = cur[0];
@@ -940,7 +940,7 @@ class OpsIQPanel {
         const val = resolve(data, path);
         if (val) rows.push({ label, value: val });
       });
-    } else {
+    } else if (typeof data === 'object' && data !== null) {
       // Generic fallback: first 6 top-level string/number fields
       let count = 0;
       for (const [key, val] of Object.entries(data)) {
