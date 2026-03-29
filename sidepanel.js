@@ -871,7 +871,133 @@ class OpsIQPanel {
           ${issues.map(i => `<div class="schema-issue-line">${this.escapeHtml(i.message)}</div>`).join('')}
         </div>` : ''}
     `;
+
+    const contentToggle = this.createSchemaContentToggle(schema);
+    if (contentToggle) item.appendChild(contentToggle);
+
     return item;
+  }
+
+  // ─── Schema content extraction ────────────────────────────────────────────
+  extractSchemaContent(schema) {
+    const data = schema.data || {};
+
+    // Resolve a dotted path like 'offers.price' or 'author.name'
+    const resolve = (obj, path) => {
+      const parts = path.split('.');
+      let cur = obj;
+      for (const p of parts) {
+        if (cur == null) return null;
+        if (Array.isArray(cur)) cur = cur[0];
+        cur = cur[p];
+      }
+      if (Array.isArray(cur)) cur = cur[0];
+      if (cur != null && typeof cur === 'object' && cur['@value']) return String(cur['@value']);
+      return cur != null ? String(cur) : null;
+    };
+
+    const FIELDS = {
+      'Product':        [['name','name'],['offers.price','price'],['brand.name','brand'],['description','description']],
+      'ProductGroup':   [['name','name'],['brand.name','brand'],['description','description']],
+      'Article':        [['headline','headline'],['author.name','author'],['datePublished','published'],['publisher.name','publisher']],
+      'NewsArticle':    [['headline','headline'],['author.name','author'],['datePublished','published'],['publisher.name','publisher']],
+      'BlogPosting':    [['headline','headline'],['author.name','author'],['datePublished','published']],
+      'Organization':   [['name','name'],['url','url'],['description','description'],['telephone','phone']],
+      'LocalBusiness':  [['name','name'],['address.streetAddress','address'],['telephone','phone'],['url','url']],
+      'Event':          [['name','name'],['startDate','start'],['location.name','location']],
+      'Person':         [['name','name'],['jobTitle','title'],['worksFor.name','employer']],
+      'WebSite':        [['name','name'],['url','url']],
+      'WebPage':        [['name','name'],['description','description'],['url','url']],
+      'Recipe':         [['name','name'],['author.name','author'],['prepTime','prep'],['cookTime','cook']],
+      'BreadcrumbList': null,
+      'FAQPage':        null,
+    };
+
+    const rows = [];
+
+    if (schema.type === 'BreadcrumbList') {
+      const listItems = data.itemListElement;
+      if (Array.isArray(listItems)) {
+        const trail = listItems
+          .map(item => item.name || item.item?.name || item['@id'] || null)
+          .filter(Boolean)
+          .join(' › ');
+        if (trail) rows.push({ label: 'path', value: trail });
+      }
+      return rows;
+    }
+
+    if (schema.type === 'FAQPage') {
+      const mainEntity = data.mainEntity;
+      const first = Array.isArray(mainEntity) ? mainEntity[0] : mainEntity;
+      if (first?.name) rows.push({ label: 'first Q', value: first.name });
+      return rows;
+    }
+
+    const fieldMap = FIELDS[schema.type];
+    if (fieldMap) {
+      fieldMap.forEach(([path, label]) => {
+        const val = resolve(data, path);
+        if (val) rows.push({ label, value: val });
+      });
+    } else {
+      // Generic fallback: first 6 top-level string/number fields
+      let count = 0;
+      for (const [key, val] of Object.entries(data)) {
+        if (key.startsWith('@')) continue;
+        if (count >= 6) break;
+        const v = (typeof val === 'string' || typeof val === 'number') ? String(val) : null;
+        if (v) { rows.push({ label: key, value: v }); count++; }
+      }
+    }
+
+    return rows;
+  }
+
+  createSchemaContentToggle(schema) {
+    const rows = this.extractSchemaContent(schema);
+    if (rows.length === 0) return null;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'schema-content-toggle-wrap';
+
+    const btn = document.createElement('button');
+    btn.className = 'schema-content-toggle';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.textContent = 'Show content ▶';
+
+    const body = document.createElement('div');
+    body.className = 'schema-content-body';
+    body.hidden = true;
+
+    rows.forEach(({ label, value }) => {
+      const row = document.createElement('div');
+      row.className = 'schema-content-row';
+
+      const keyEl = document.createElement('span');
+      keyEl.className = 'schema-content-key';
+      keyEl.textContent = label;
+
+      const valEl = document.createElement('span');
+      valEl.className = 'schema-content-val';
+      valEl.textContent = value;
+      valEl.title = value;
+
+      row.appendChild(keyEl);
+      row.appendChild(valEl);
+      body.appendChild(row);
+    });
+
+    btn.addEventListener('click', () => {
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      btn.textContent = expanded ? 'Show content ▶' : 'Hide content ▼';
+      body.hidden = expanded;
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(body);
+    return wrap;
   }
 
   createOpportunityItem(opp) {
