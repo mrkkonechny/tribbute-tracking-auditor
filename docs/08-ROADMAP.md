@@ -170,17 +170,17 @@ Strategic feature plan and working backlog. Most recent entries at the top withi
 - **Related:** DEC-0002
 
 ### ROAD-0013 — PageSpeed API key input for higher quota
-- **Status:** Proposed
+- **Status:** Done — Implemented in v1.5.0 (2026-03-29)
 - **Type:** Feature
 - **Priority:** P3 (Low)
 - **Date Added:** 2026-03-27
 - **Scope:** Small (< 1 day)
 - **Description:** The SEO tab fetches PageSpeed Insights API v5 without an API key (free quota: ~25 req/100s per IP). Users on shared IPs or corporate proxies hit 429 quota errors. Adding an optional API key input (stored in `chrome.storage.local`) would allow users to use their own quota.
 - **Acceptance Criteria:**
-  - [ ] Settings area (or SEO tab toolbar) with optional API key input
-  - [ ] Key stored in `chrome.storage.local` (not synced, to avoid cross-device key leakage)
-  - [ ] Key appended as `&key=` param to PageSpeed API URL when present
-  - [ ] No key required — no-key path continues to work
+  - [x] Settings area (or SEO tab toolbar) with optional API key input
+  - [x] Key stored in `chrome.storage.local` (not synced, to avoid cross-device key leakage)
+  - [x] Key appended as `&key=` param to PageSpeed API URL when present
+  - [x] No key required — no-key path continues to work
 - **Related:** DEC-0005
 
 ---

@@ -6,6 +6,19 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 
 ---
 
+## [v1.5.0] — Unreleased
+
+### Added
+- **SEO tab full text**: On-Page Signals rows (description, H1) now show full untruncated values; CSS updated to `word-break: break-word` instead of ellipsis clipping
+- **SEO copy button**: Copy button in the SEO tab toolbar exports a plain-text `opsIQ SEO REPORT` with all signal rows to the clipboard
+- **PageSpeed API key support**: Optional API key row in the PageSpeed sub-section (stored in `chrome.storage.local`, per-device). When quota is hit, shows contextual message: "Add a free Google API key above" (no key) or "Check your Google Cloud Console quota" (key present)
+- **Per-schema copy buttons**: Each schema item card has an individual Copy button that exports schema type, source, status, issues list, and raw JSON to the clipboard
+- **Schema validation aligned with pdpIQ**: Product recommended fields now include `sku`, `gtin`, `mpn`; AggregateRating `reviewCount` moved from required to recommended; `gtin` validates against full variant chain (gtin13/gtin14/gtin12/gtin8); Offer `price` accepts `lowPrice` as equivalent (Shopify/WooCommerce range pricing)
+- **Schema content display aligned with pdpIQ**: AggregateRating and Review added to content FIELDS map; Product shows identifiers (sku, gtin, mpn) and lowPrice; Organization shows logo; `reviewCount|ratingCount` fallback for WooCommerce/BigCommerce display
+- **Platform schema normalization**: Shopify `@id` deferred reference resolution in `@graph` (e.g. `aggregateRating: {"@id": "#reviews"}` now correctly links to the AggregateRating block); BigCommerce typeless `@graph` blocks now contribute `aggregateRating` to the Product entry; WooCommerce `ratingCount` accepted as equivalent to `reviewCount` in both validation and content display
+
+---
+
 ## [Unreleased]
 
 ### Changed
