@@ -232,12 +232,74 @@ class OpsIQPanel {
       content.appendChild(tag);
     });
 
+    const recs = this.buildTrackingRecs(items);
+    if (recs) content.appendChild(recs);
+
     const foundCount = items.filter(i => i.found).length;
     const summaryText = foundCount > 0
       ? `${foundCount} tracking tool${foundCount > 1 ? 's' : ''} detected`
       : 'No tracking detected';
     summary.textContent = summaryText;
     toggle.setAttribute('aria-label', `Tracking detection — ${summaryText}`);
+  }
+
+  // ─── Tracking recommendations ─────────────────────────────────────────────
+  buildTrackingRecs(items) {
+    const RECS = {
+      'GTM': [
+        'May load conditionally (cookie consent, A/B test, or CMP blocking)',
+        'Check for server-side GTM on a custom subdomain (e.g. gtm.example.com)',
+        'Inspect page source (Ctrl+U) for the GTM snippet',
+        'Tag may be suppressed in preview/debug mode environments'
+      ],
+      'GA4': [
+        'May be loaded inside a GTM container — check GTM tags first',
+        'Search browser console: gtag("config", "G-XXXXXXX")',
+        'Check Network tab for requests to google-analytics.com/g/collect'
+      ],
+      'Google Ads': [
+        'Conversion tracking fires only on conversion/thank-you pages',
+        'May be deployed inside GTM as an Ads Conversion Tracking tag',
+        'Look for AW- IDs in GTM tags or search Network tab for googleads.g.doubleclick.net'
+      ],
+      'Facebook Pixel': [
+        'May fire only on specific pages (e.g. add-to-cart, purchase, lead)',
+        'Check Meta Events Manager for server-side Conversions API activity',
+        'Search Network tab for connect.facebook.net/en_US/fbevents.js',
+        'Open console on target conversion pages and run: fbq.getState()'
+      ]
+    };
+
+    const notFound = items.filter(i => !i.found);
+    if (notFound.length === 0) return null;
+
+    const container = document.createElement('div');
+    container.className = 'tracking-recs';
+
+    notFound.forEach(item => {
+      const tips = RECS[item.prefix];
+      if (!tips) return;
+
+      const block = document.createElement('div');
+      block.className = 'tracking-rec-item';
+
+      const label = document.createElement('span');
+      label.className = 'tracking-rec-label';
+      label.textContent = `${item.prefix} not detected — things to check:`;
+      block.appendChild(label);
+
+      const ul = document.createElement('ul');
+      ul.className = 'tracking-rec-list';
+      tips.forEach(tip => {
+        const li = document.createElement('li');
+        li.textContent = tip;
+        ul.appendChild(li);
+      });
+      block.appendChild(ul);
+      container.appendChild(block);
+    });
+
+    return container;
   }
 
   renderTrackingError() {
