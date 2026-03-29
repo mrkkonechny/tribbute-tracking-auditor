@@ -371,11 +371,56 @@
             }
           };
 
-          // Handle @graph arrays (common in Shopify, WordPress, etc.)
+          // Handle @graph arrays (Shopify, WordPress, BigCommerce, etc.)
           if (parsed['@graph'] && Array.isArray(parsed['@graph'])) {
-            parsed['@graph'].forEach((schema, i) => {
-              addSchema(schema, `script[${index}]/@graph[${i}]`);
+            const graphItems = parsed['@graph'];
+
+            // Build @id index for Shopify deferred references:
+            // e.g. aggregateRating: {"@id": "#reviews"} → resolved to the block with @id="#reviews"
+            const idIndex = {};
+            graphItems.forEach(item => {
+              if (item && typeof item['@id'] === 'string') idIndex[item['@id']] = item;
             });
+
+            // Resolve a single @id-only reference object to the indexed item
+            const resolveRef = (val) => {
+              if (val && typeof val === 'object' && val['@id'] &&
+                  Object.keys(val).length === 1 && idIndex[val['@id']]) {
+                return idIndex[val['@id']];
+              }
+              return val;
+            };
+
+            // First pass: add all typed items, resolving @id references in their fields
+            graphItems.forEach((schema, i) => {
+              if (!schema || typeof schema !== 'object' || !schema['@type']) return;
+              // Shallow-copy and resolve top-level field references
+              const resolved = Object.assign({}, schema);
+              for (const key of Object.keys(resolved)) {
+                if (key.startsWith('@')) continue;
+                resolved[key] = resolveRef(resolved[key]);
+              }
+              addSchema(resolved, `script[${index}]/@graph[${i}]`);
+            });
+
+            // Second pass (BigCommerce): attach aggregateRating from typeless blocks
+            // BigCommerce emits @graph items with no @type that contain aggregateRating data
+            const scriptBase = `script[${index}]/@graph[`;
+            const productEntry = schemaData.find(s =>
+              s.source.startsWith(scriptBase) &&
+              (s.type === 'Product' || s.type === 'ProductGroup') &&
+              !s.data.aggregateRating
+            );
+            if (productEntry) {
+              for (const item of graphItems) {
+                if (item && !item['@type'] && item.aggregateRating) {
+                  productEntry.data = Object.assign({}, productEntry.data, {
+                    aggregateRating: item.aggregateRating
+                  });
+                  break;
+                }
+              }
+            }
           }
           // Handle arrays of schemas
           else if (Array.isArray(parsed)) {
