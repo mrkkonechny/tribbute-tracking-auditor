@@ -105,6 +105,7 @@ class OpsIQPanel {
     document.getElementById('copyEvents').addEventListener('click', () => this.copyReport('events'));
     document.getElementById('copyAudit').addEventListener('click', () => this.copyReport('audit'));
     document.getElementById('copySchema').addEventListener('click', () => this.copyReport('schema'));
+    document.getElementById('copySEO').addEventListener('click', () => this.copySEOReport());
     document.getElementById('eventFilter').addEventListener('change', () => this.renderEvents());
     document.getElementById('trackingToggle').addEventListener('click', () => this.toggleTracking());
   }
@@ -1448,7 +1449,7 @@ class OpsIQPanel {
       : descLen < 50                        ? ['status-warn','! short']
       : descLen > 175                       ? ['status-warn','! long']
       : ['status-good','✓'];
-    addRow('Description', seoData.description ? `${seoData.description.substring(0, 60)}… (${descLen})` : '—', ...descStatus);
+    addRow('Description', seoData.description ? `${seoData.description} (${descLen})` : '—', ...descStatus);
 
     // Canonical
     const canonStatus = seoData.canonical ? ['status-good','✓'] : ['status-warn','! missing'];
@@ -1462,8 +1463,8 @@ class OpsIQPanel {
     // H1
     const h1Count = seoData.h1s?.length ?? 0;
     const h1Text = h1Count === 0 ? 'none found'
-      : h1Count === 1 ? `"${seoData.h1s[0].substring(0, 50)}"`
-      : `${h1Count} found: "${seoData.h1s[0].substring(0, 30)}…"`;
+      : h1Count === 1 ? `"${seoData.h1s[0]}"`
+      : `${h1Count} found: "${seoData.h1s[0]}"`;
     const h1Status = h1Count === 1 ? ['status-good','✓']
       : h1Count === 0 ? ['status-bad','✗ none']
       : ['status-warn','! multiple'];
@@ -1501,6 +1502,52 @@ class OpsIQPanel {
     if (seoData.hreflang?.length > 0) {
       addRow('Hreflang', `${seoData.hreflang.length} alternate(s)`, 'status-good', '✓');
     }
+  }
+
+  copySEOReport() {
+    if (!this.seoData) return;
+    const d = this.seoData;
+    const date = new Date().toLocaleString();
+    const url = this.currentUrl || '—';
+
+    const titleLen = d.title?.length ?? 0;
+    const titleSt = !d.title ? 'missing' : titleLen < 30 ? 'short' : titleLen > 70 ? 'long' : 'ok';
+    const descLen = d.description?.length ?? 0;
+    const descSt = !d.description ? 'missing' : descLen < 50 ? 'short' : descLen > 175 ? 'long' : 'ok';
+    const h1Count = d.h1s?.length ?? 0;
+    const h1St = h1Count === 1 ? 'ok' : h1Count === 0 ? 'none' : 'multiple';
+    const ogKeys = Object.keys(d.openGraph || {});
+    const hasOgCore = ['og:title','og:description','og:image'].every(k => ogKeys.includes(k));
+    const ogSt = ogKeys.length === 0 ? 'none' : hasOgCore ? 'ok' : 'incomplete';
+    const twKeys = Object.keys(d.twitterCards || {});
+    const { total, withAlt } = d.imageAltCoverage || { total: 0, withAlt: 0 };
+    const altPct = total > 0 ? Math.round(withAlt / total * 100) : 100;
+    const altSt = altPct >= 90 ? 'ok' : altPct >= 70 ? `${altPct}%` : `${altPct}% (low)`;
+    const { internal, external } = d.linkCounts || { internal: 0, external: 0 };
+
+    let text = `opsIQ SEO REPORT\nGenerated: ${date}\nPage: ${url}\n\n`;
+    text += `TITLE: ${d.title || '—'} (${titleLen} chars) — ${titleSt}\n`;
+    text += `DESCRIPTION: ${d.description || '—'} (${descLen} chars) — ${descSt}\n`;
+    text += `CANONICAL: ${d.canonical || 'not set'}\n`;
+    text += `ROBOTS: ${d.robots || 'not set (index, follow)'}\n`;
+    text += `H1: ${h1Count === 0 ? 'none found' : h1Count === 1 ? `"${d.h1s[0]}"` : `${h1Count} found — "${d.h1s[0]}"`} — ${h1St}\n`;
+    text += `H2s: ${d.h2Count} found\n`;
+    text += `OPEN GRAPH: ${ogKeys.length ? `${ogKeys.length} tags` : 'none'} — ${ogSt}\n`;
+    text += `TWITTER CARDS: ${twKeys.length ? `${twKeys.length} tags` : 'none'} — ${twKeys.length > 0 ? 'ok' : 'none'}\n`;
+    text += `IMAGE ALT: ${total > 0 ? `${withAlt}/${total} have alt` : 'no images'} — ${altSt}\n`;
+    text += `LINKS: ${internal} internal, ${external} external\n`;
+    if (d.hreflang?.length > 0) {
+      text += `HREFLANG: ${d.hreflang.length} alternate(s)\n`;
+    }
+
+    navigator.clipboard.writeText(text).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
   }
 
   async loadPageSpeed(url) {
