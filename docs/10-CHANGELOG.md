@@ -18,6 +18,24 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 
 ---
 
+## [v1.4.0] — Unreleased
+
+### Added
+- **Tab blurbs**: short descriptive text beneath each tab toolbar (Events, Audit, Schema, SEO) explaining what the tab shows
+- **Tracking recommendations**: when GTM, GA4, Google Ads, or Facebook Pixel is not detected, a contextual check-list appears below the detection pills with 3–4 actionable tips per tool (e.g. "check GTM tags first", "search Network tab for fbevents.js")
+- **Schema content extraction**: collapsible "Show content ▶" toggle on every schema item, revealing key human-readable fields (name, price, author, headline, breadcrumb trail, etc.) resolved from raw JSON-LD/Microdata data
+- **SEO tab**: new fourth tab with two sub-sections:
+  - *On-Page Signals*: title, meta description, canonical, robots, H1/H2 counts, Open Graph, Twitter Cards, image alt coverage, internal/external link counts, hreflang — each row shows a status indicator (✓ / ! / ✗)
+  - *PageSpeed Insights*: 4 score circles (Performance, SEO, Accessibility, Best Practices) + Core Web Vitals row (LCP, CLS, TBT) fetched from the Google PageSpeed Insights API v5 (free, no API key, mobile strategy)
+- DEC-0005: PageSpeed API architectural decision (see Decision Log)
+
+### Fixed
+- `extractSchemaContent` empty-array crash: `resolve()` now null-checks after unwrapping the first array element, preventing `TypeError` on schemas with empty array fields (e.g. `offers: []`)
+- `loadSEOData` stale response guard: `_seoLoadToken` pattern prevents a delayed `GET_SEO_DATA` response from writing to `seoData` after page navigation has reset state
+- PageSpeed 429 quota errors now surface an actionable message ("quota exceeded, try again") rather than the generic connection error
+
+---
+
 ## [1.3.0] — 2026-03-26
 
 ### Added

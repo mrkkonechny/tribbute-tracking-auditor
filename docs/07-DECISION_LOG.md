@@ -22,6 +22,37 @@ Track architectural, technical, and strategic decisions with their rationale. Mo
 
 ## Decisions
 
+### DEC-0005 — Use Google PageSpeed Insights API v5 (free, no key, mobile strategy) for SEO tab
+
+**Date:** 2026-03-27
+**Status:** Accepted
+
+**Context:**
+The SEO tab needed an external performance and SEO score source. Options were (1) Lighthouse CLI (not available in a browser extension), (2) PageSpeed Insights API v5 with no key (free, rate-limited), (3) PageSpeed Insights API with an API key (higher quota, requires user setup), (4) no external data (on-page signals only).
+
+**Decision:**
+Fetch PageSpeed Insights API v5 with no API key, using `strategy=mobile`, requesting all four categories: `performance`, `seo`, `accessibility`, `best-practices`.
+
+**Rationale:**
+- No API key means zero setup friction for users — open the SEO tab and scores appear
+- Free quota (~25 requests per 100 seconds per IP) is sufficient for a single developer tool — analysts check one page at a time, not in bulk
+- Mobile strategy chosen over desktop: Google uses mobile-first indexing, making mobile scores the more actionable signal for SEO work
+- All four categories requested in one call — no extra round-trips, and the four scores map directly to developer concerns (performance, SEO ranking signals, accessibility compliance, best practices)
+
+**Alternatives Considered:**
+- API key with higher quota: rejected — requires per-user configuration, adds friction, unnecessary for the single-page analysis use case
+- Desktop strategy: rejected — mobile-first indexing makes mobile the primary signal; desktop can be added as a future option
+- On-page only (no PageSpeed): rejected — Core Web Vitals (LCP, CLS, TBT) are not extractable from the page DOM; external measurement is required
+
+**Consequences:**
+- Users on shared IP/VPN may hit 429 quota errors; surfaced as a distinct message ("quota exceeded, try again") rather than a generic error
+- PageSpeed requests hit `www.googleapis.com` — blocked on intranets without egress; failure state shown as loading error
+- `fetch()` call runs from the side panel context (no CORS issues — side panel is an extension page with unrestricted fetch)
+
+**Related:** ROAD-0013 (future: add API key input option for higher quota)
+
+---
+
 ### DEC-0004: Migrate UI surface from popup to Chrome Side Panel
 
 **Date:** 2026-03-26
