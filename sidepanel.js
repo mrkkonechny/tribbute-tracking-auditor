@@ -883,10 +883,50 @@ class OpsIQPanel {
         </div>` : ''}
     `;
 
+    // Append copy button to the header (after innerHTML is set — safe, no event listener loss)
+    const header = item.querySelector('.schema-item-header');
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'schema-copy-btn';
+    copyBtn.setAttribute('aria-label', 'Copy schema');
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.copySchemaItem(schema, issues);
+    });
+    header.appendChild(copyBtn);
+
     const contentToggle = this.createSchemaContentToggle(schema);
     if (contentToggle) item.appendChild(contentToggle);
 
     return item;
+  }
+
+  copySchemaItem(schema, issues) {
+    const statusText = issues.some(i => i.severity === 'error')
+      ? `[✗] ${issues.filter(i => i.severity === 'error').length} error(s)`
+      : issues.some(i => i.severity === 'warning')
+      ? `[!] ${issues.filter(i => i.severity === 'warning').length} warning(s)`
+      : '[✓] valid';
+
+    let text = `Schema: ${schema.type || 'Unknown'} (${schema.format || ''})\n`;
+    text += `Source: ${schema.source || '—'}\n`;
+    text += `Status: ${statusText}\n`;
+    text += `Issues:\n`;
+    if (issues.length === 0) {
+      text += '  none\n';
+    } else {
+      issues.forEach(i => { text += `  - [${i.severity}] ${i.message}\n`; });
+    }
+    text += `\nRaw data:\n${JSON.stringify(schema.data, null, 2)}\n`;
+
+    navigator.clipboard.writeText(text).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
   }
 
   // ─── Schema content extraction ────────────────────────────────────────────
