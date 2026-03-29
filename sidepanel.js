@@ -1550,24 +1550,119 @@ class OpsIQPanel {
     });
   }
 
+  // ─── PageSpeed API key row ─────────────────────────────────────────────────
+  renderPageSpeedKeyRow(container) {
+    // Remove any existing key row before re-rendering
+    const existing = container.querySelector('.ps-api-key-row');
+    if (existing) existing.remove();
+
+    const row = document.createElement('div');
+    row.className = 'ps-api-key-row';
+
+    chrome.storage.local.get('psApiKey', ({ psApiKey }) => {
+      if (psApiKey) {
+        // Show masked key + Clear button
+        const label = document.createElement('span');
+        label.className = 'ps-api-key-label';
+        label.textContent = 'API Key:';
+
+        const masked = document.createElement('span');
+        masked.className = 'ps-api-key-masked';
+        masked.textContent = '••••••••••••';
+
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'ps-api-key-action';
+        clearBtn.textContent = 'Clear';
+        clearBtn.addEventListener('click', () => {
+          chrome.storage.local.remove('psApiKey', () => {
+            this.renderPageSpeedKeyRow(container);
+          });
+        });
+
+        row.appendChild(label);
+        row.appendChild(masked);
+        row.appendChild(clearBtn);
+      } else {
+        // Show input + Save button
+        const label = document.createElement('span');
+        label.className = 'ps-api-key-label';
+        label.textContent = 'API Key (optional):';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'ps-api-key-input';
+        input.placeholder = 'Google API key for higher quota';
+        input.setAttribute('aria-label', 'PageSpeed Insights API key');
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'ps-api-key-action';
+        saveBtn.textContent = 'Save';
+
+        const save = () => {
+          const val = input.value.trim();
+          if (!val) return;
+          chrome.storage.local.set({ psApiKey: val }, () => {
+            this.renderPageSpeedKeyRow(container);
+          });
+        };
+        saveBtn.addEventListener('click', save);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
+
+        row.appendChild(label);
+        row.appendChild(input);
+        row.appendChild(saveBtn);
+      }
+    });
+
+    // Insert key row before any existing content
+    container.insertBefore(row, container.firstChild);
+  }
+
   async loadPageSpeed(url) {
+    if (!url || !url.startsWith('http')) {
+      const resultsEl = document.getElementById('pageSpeedResults');
+      this.renderPageSpeedKeyRow(resultsEl);
+      resultsEl.appendChild(Object.assign(document.createElement('p'), {
+        className: 'ps-loading',
+        textContent: 'PageSpeed requires a public http/https URL.'
+      }));
+      return;
+    }
+
     const resultsEl = document.getElementById('pageSpeedResults');
     resultsEl.innerHTML = '<p class="ps-loading">Fetching PageSpeed data…</p>';
+    this.renderPageSpeedKeyRow(resultsEl);
+
+    const { psApiKey } = await new Promise(resolve =>
+      chrome.storage.local.get('psApiKey', resolve)
+    );
 
     const categories = ['performance','seo','accessibility','best-practices'];
-    const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=mobile${categories.map(c => `&category=${c}`).join('')}`;
+    const baseUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=mobile${categories.map(c => `&category=${c}`).join('')}`;
+    const apiUrl = psApiKey ? `${baseUrl}&key=${encodeURIComponent(psApiKey)}` : baseUrl;
 
     try {
       const res = await fetch(apiUrl);
       if (res.status === 429) {
-        resultsEl.innerHTML = '<p class="ps-loading">PageSpeed API quota exceeded. Try again in a moment.</p>';
+        const msg = psApiKey
+          ? 'API quota exceeded for your key. Check your Google Cloud Console quota.'
+          : 'API quota exceeded. Add a free Google API key above to increase your limit.';
+        resultsEl.querySelector('.ps-loading')
+          ? resultsEl.querySelector('.ps-loading').textContent = msg
+          : resultsEl.appendChild(Object.assign(document.createElement('p'), { className: 'ps-loading', textContent: msg }));
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      // Remove loading spinner before rendering scores
+      const spinner = resultsEl.querySelector('.ps-loading');
+      if (spinner) spinner.remove();
       this.renderPageSpeed(data, resultsEl);
     } catch (e) {
-      resultsEl.innerHTML = '<p class="ps-loading">Could not load PageSpeed data. Check connection or try again.</p>';
+      const errEl = resultsEl.querySelector('.ps-loading');
+      const msg = 'Could not load PageSpeed data. Check connection or try again.';
+      if (errEl) errEl.textContent = msg;
+      else resultsEl.appendChild(Object.assign(document.createElement('p'), { className: 'ps-loading', textContent: msg }));
     }
   }
 
