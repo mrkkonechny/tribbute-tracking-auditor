@@ -1736,6 +1736,7 @@ class OpsIQPanel {
     const audits = psData?.lighthouseResult?.audits || {};
 
     container.innerHTML = '';
+    this.renderPageSpeedKeyRow(container);
 
     const scoreClass = s => s >= 0.9 ? 'ps-score-good' : s >= 0.5 ? 'ps-score-warn' : 'ps-score-bad';
 
