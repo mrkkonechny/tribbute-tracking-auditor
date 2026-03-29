@@ -184,16 +184,69 @@ The `title` attribute (set by `valEl.title = value`) is kept so full text remain
 
 ---
 
+## Part 5: Platform-Specific Schema Normalization
+
+pdpIQ accommodates four platform-specific patterns that opsIQ must also handle to produce consistent results across Shopify, WooCommerce, and BigCommerce pages.
+
+### Pattern 1 — Shopify `@id` reference resolution in `@graph`
+
+Shopify outputs AggregateRating as a deferred reference inside JSON-LD `@graph`:
+```json
+{ "@graph": [
+  { "@type": "Product", "aggregateRating": { "@id": "#reviews" } },
+  { "@id": "#reviews", "@type": "AggregateRating", "ratingValue": 4.5, "reviewCount": 120 }
+]}
+```
+
+Without resolving `@id` references, opsIQ sees `aggregateRating: { "@id": "#reviews" }` and reports the product as missing aggregateRating.
+
+**Fix in `content.js`:** When parsing a `@graph` array, build an `idIndex` map (`{ [item['@id']]: item }`) over all items before extraction. When a field value is an object containing only `@id`, replace it with the resolved item from the index.
+
+This affects: `aggregateRating`, `brand`, `offers`, and any other fields that Shopify may defer via `@id`.
+
+### Pattern 2 — `ratingCount` fallback for `reviewCount`
+
+WooCommerce and BigCommerce use `ratingCount` where most platforms use `reviewCount` on AggregateRating objects. opsIQ currently only reads `reviewCount`.
+
+**Fix in `content.js`:** When extracting AggregateRating data, use `reviewCount ?? ratingCount` — i.e. try `reviewCount` first, fall back to `ratingCount`.
+
+**Fix in `sidepanel.js` `validateSchemaItem()`:** The `reviewCount` recommended-field check should accept `ratingCount` as equivalent. Update the check: flag as missing only if both `reviewCount` and `ratingCount` are absent.
+
+**Fix in `sidepanel.js` `extractSchemaContent()`:** The AggregateRating FIELDS entry uses path `reviewCount` — update to try `reviewCount` first, then `ratingCount`, displaying whichever is present.
+
+### Pattern 3 — BigCommerce typeless JSON-LD blocks
+
+BigCommerce emits `@graph` items with no `@type` property that contain `aggregateRating` data linked to the product:
+```json
+{ "@graph": [
+  { "@type": "Product", "name": "Widget" },
+  { "aggregateRating": { "ratingValue": 4.2, "reviewCount": 88 } }
+]}
+```
+
+**Fix in `content.js`:** When scanning a `@graph` array for AggregateRating, if no typed `AggregateRating` block was found, do a second pass over typeless items (no `@type`) that contain an `aggregateRating` property and merge that data into the Product's rating.
+
+### Pattern 4 — `lowPrice` fallback for `price` on Offer
+
+All platforms may use `lowPrice` instead of `price` when the product has a price range. opsIQ's current Offer validation flags `price` as a required field — this produces false-positive errors on Shopify and WooCommerce range-priced products.
+
+**Fix in `content.js`:** When extracting Offer data, use `offer.price ?? offer.lowPrice`.
+
+**Fix in `sidepanel.js` `validateSchemaItem()`:** The Offer `price` required-field check should pass when either `price` or `lowPrice` is present. Store `lowPrice` alongside `price` in the extracted data so it is available for validation.
+
+**Fix in `sidepanel.js` `extractSchemaContent()`:** Product FIELDS `offers.price` path — if `price` resolves to null, try `offers.lowPrice` as fallback display value.
+
+---
+
 ## File Map
 
 | Action | File |
 |---|---|
 | Modify | `sidepanel.html` — add `#copySEO` button to SEO toolbar |
 | Modify | `sidepanel.css` — `.seo-signal-value` full-text, `.schema-copy-btn`, `.schema-content-val` full-text |
-| Modify | `sidepanel.js` — `renderSEOSignals` (remove truncations), `copySEOReport()`, `bindToolbar()` SEO wiring, `loadPageSpeed()` (API key support), `renderPageSpeedKeyRow()`, `createSchemaItem()` (copy button), `validateSchemaItem()` (new fields), `extractSchemaContent()` (new fields + AggregateRating) |
-| Modify | `manifest.json` — add `"storage"` permission if missing |
-
-No changes to `content.js` or `background.js`.
+| Modify | `sidepanel.js` — `renderSEOSignals` (remove truncations), `copySEOReport()`, `bindToolbar()` SEO wiring, `loadPageSpeed()` (API key support), `renderPageSpeedKeyRow()`, `createSchemaItem()` (copy button), `validateSchemaItem()` (new fields + platform fixes), `extractSchemaContent()` (new fields, AggregateRating, lowPrice fallback) |
+| Modify | `content.js` — `@id` reference resolution in `@graph`, `ratingCount` fallback, BigCommerce typeless block handling, `lowPrice` fallback on Offer |
+| Modify | `manifest.json` — add `"storage"` permission |
 
 ---
 
