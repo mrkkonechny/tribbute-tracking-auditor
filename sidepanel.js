@@ -1621,6 +1621,7 @@ class OpsIQPanel {
   async loadPageSpeed(url) {
     if (!url || !url.startsWith('http')) {
       const resultsEl = document.getElementById('pageSpeedResults');
+      resultsEl.innerHTML = '';
       this.renderPageSpeedKeyRow(resultsEl);
       resultsEl.appendChild(Object.assign(document.createElement('p'), {
         className: 'ps-loading',
