@@ -935,6 +935,14 @@ class OpsIQPanel {
 
     // Resolve a dotted path like 'offers.price' or 'author.name'
     const resolve = (obj, path) => {
+      // Support 'fieldA|fieldB' fallback (try each until non-null)
+      if (path.includes('|')) {
+        for (const alt of path.split('|')) {
+          const v = resolve(obj, alt.trim());
+          if (v != null) return v;
+        }
+        return null;
+      }
       const parts = path.split('.');
       let cur = obj;
       for (const p of parts) {
@@ -950,7 +958,7 @@ class OpsIQPanel {
     const FIELDS = {
       'Product':        [['name','name'],['offers.price','price'],['offers.lowPrice','low price'],['brand.name','brand'],['description','description'],['sku','sku'],['gtin','gtin'],['mpn','mpn']],
       'ProductGroup':   [['name','name'],['brand.name','brand'],['description','description']],
-      'AggregateRating':[['ratingValue','rating'],['reviewCount','reviews'],['bestRating','best']],
+      'AggregateRating':[['ratingValue','rating'],['reviewCount|ratingCount','reviews'],['bestRating','best']],
       'Article':        [['headline','headline'],['author.name','author'],['datePublished','published'],['publisher.name','publisher']],
       'NewsArticle':    [['headline','headline'],['author.name','author'],['datePublished','published'],['publisher.name','publisher']],
       'BlogPosting':    [['headline','headline'],['author.name','author'],['datePublished','published']],
