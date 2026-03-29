@@ -948,18 +948,20 @@ class OpsIQPanel {
     };
 
     const FIELDS = {
-      'Product':        [['name','name'],['offers.price','price'],['brand.name','brand'],['description','description']],
+      'Product':        [['name','name'],['offers.price','price'],['offers.lowPrice','low price'],['brand.name','brand'],['description','description'],['sku','sku'],['gtin','gtin'],['mpn','mpn']],
       'ProductGroup':   [['name','name'],['brand.name','brand'],['description','description']],
+      'AggregateRating':[['ratingValue','rating'],['reviewCount','reviews'],['bestRating','best']],
       'Article':        [['headline','headline'],['author.name','author'],['datePublished','published'],['publisher.name','publisher']],
       'NewsArticle':    [['headline','headline'],['author.name','author'],['datePublished','published'],['publisher.name','publisher']],
       'BlogPosting':    [['headline','headline'],['author.name','author'],['datePublished','published']],
-      'Organization':   [['name','name'],['url','url'],['description','description'],['telephone','phone']],
+      'Organization':   [['name','name'],['url','url'],['logo','logo'],['description','description'],['telephone','phone']],
       'LocalBusiness':  [['name','name'],['address.streetAddress','address'],['telephone','phone'],['url','url']],
       'Event':          [['name','name'],['startDate','start'],['location.name','location']],
       'Person':         [['name','name'],['jobTitle','title'],['worksFor.name','employer']],
       'WebSite':        [['name','name'],['url','url']],
       'WebPage':        [['name','name'],['description','description'],['url','url']],
       'Recipe':         [['name','name'],['author.name','author'],['prepTime','prep'],['cookTime','cook']],
+      'Review':         [['itemReviewed.name','reviewed'],['reviewRating.ratingValue','rating'],['author.name','author'],['reviewBody','body'],['datePublished','published']],
       'BreadcrumbList': null,
       'FAQPage':        null,
     };
@@ -1160,6 +1162,8 @@ class OpsIQPanel {
         offersToCheck.forEach((offer, i) => {
           if (rules.offerFields) {
             for (const field of rules.offerFields) {
+              // 'price' accepts 'lowPrice' as equivalent (Shopify/WooCommerce range pricing)
+              if (field === 'price' && this._hasValue(offer.lowPrice)) continue;
               if (!this._hasValue(offer[field])) {
                 issues.push({
                   severity: 'warning',
@@ -1329,6 +1333,18 @@ class OpsIQPanel {
       return undefined;
     }
 
+    // For 'reviewCount', also accept 'ratingCount' (WooCommerce/BigCommerce field name)
+    if (field === 'reviewCount') {
+      if (this._hasValue(data.reviewCount)) return data.reviewCount;
+      if (this._hasValue(data.ratingCount)) return data.ratingCount;
+      return undefined;
+    }
+
+    // For 'gtin', check gtin variants (pdpIQ fallback chain: gtin13 → gtin14 → gtin12 → gtin8)
+    if (field === 'gtin') {
+      return data.gtin || data.gtin13 || data.gtin14 || data.gtin12 || data.gtin8 || undefined;
+    }
+
     // For other fields, use general extraction
     return this._extractValue(value);
   }
@@ -1345,7 +1361,7 @@ class OpsIQPanel {
     return {
       'Product': {
         required: ['name'],
-        recommended: ['image', 'description', 'brand', 'offers'],
+        recommended: ['image', 'description', 'brand', 'offers', 'sku', 'gtin', 'mpn'],
         offerFields: ['price', 'priceCurrency', 'availability']
       },
       'ProductGroup': {
@@ -1410,8 +1426,8 @@ class OpsIQPanel {
         recommended: ['reviewBody', 'datePublished']
       },
       'AggregateRating': {
-        required: ['ratingValue', 'reviewCount'],
-        recommended: ['bestRating', 'worstRating']
+        required: ['ratingValue'],
+        recommended: ['reviewCount', 'bestRating', 'worstRating']
       },
       'VideoObject': {
         required: ['name', 'description', 'thumbnailUrl', 'uploadDate'],
