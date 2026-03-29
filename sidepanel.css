@@ -511,9 +511,7 @@ html, body {
 .seo-signal-value {
   color: var(--text-primary);
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
 .seo-signal-status {
@@ -640,10 +638,71 @@ html, body {
 
 .schema-content-val {
   color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   flex: 1;
+  word-break: break-word;
+}
+
+/* ─── Schema item copy button ─── */
+.schema-copy-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0 var(--space-xs);
+  line-height: 1;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.schema-copy-btn:hover { color: var(--accent); }
+.schema-copy-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ─── PageSpeed API key row ─── */
+.ps-api-key-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) 0 var(--space-sm);
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+.ps-api-key-label {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.ps-api-key-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 11px;
+  padding: 2px var(--space-xs);
+}
+.ps-api-key-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ps-api-key-action {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 var(--space-xs);
+  flex-shrink: 0;
+}
+.ps-api-key-action:hover { text-decoration: underline; }
+.ps-api-key-masked {
+  color: var(--text-secondary);
+  font-size: 11px;
+  flex: 1;
+  letter-spacing: 2px;
 }
 
 /* ─── Empty state ─── */
