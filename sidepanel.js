@@ -9,6 +9,7 @@ class OpsIQPanel {
     this.capturedEvents = [];
     this.auditIssues = [];
     this.schemaData = null;
+    this.seoData = null;
     this.port = null;
     this.currentUrl = null;
     this.currentTabId = null;
@@ -91,6 +92,10 @@ class OpsIQPanel {
     if (tabName === 'schema' && !this.schemaData) {
       this.loadSchemaData();
     }
+
+    if (tabName === 'seo' && !this.seoData) {
+      this.loadSEOData();
+    }
   }
 
   // ─── Toolbar buttons ──────────────────────────────────────────────────────
@@ -169,6 +174,7 @@ class OpsIQPanel {
     })();
     marker.textContent = `navigated to ${shortUrl}`;
     list.appendChild(marker);
+    this.seoData = null;
     this.updateHeaderUrl(url);
   }
 
@@ -1371,6 +1377,199 @@ class OpsIQPanel {
         recommended: ['name', 'description', 'width', 'height']
       }
     };
+  }
+
+  // ─── SEO tab ──────────────────────────────────────────────────────────────
+  async loadSEOData() {
+    if (!this.currentTabId) return;
+
+    try {
+      const response = await chrome.tabs.sendMessage(this.currentTabId, { type: 'GET_SEO_DATA' });
+      if (response?.seo) {
+        this.seoData = response.seo;
+        this.renderSEOSignals(this.seoData);
+      }
+    } catch (e) {
+      document.getElementById('seoSignals').innerHTML =
+        '<p class="empty-state">Could not load SEO data. Try reloading the page.</p>';
+    }
+
+    if (this.currentUrl) {
+      this.loadPageSpeed(this.currentUrl);
+    }
+  }
+
+  renderSEOSignals(seoData) {
+    const list = document.getElementById('seoSignals');
+    list.innerHTML = '';
+
+    const addRow = (label, value, statusClass, statusText) => {
+      const row = document.createElement('div');
+      row.className = 'seo-signal-row';
+
+      const lbl = document.createElement('span');
+      lbl.className = 'seo-signal-label';
+      lbl.textContent = label;
+
+      const val = document.createElement('span');
+      val.className = 'seo-signal-value';
+      val.textContent = value;
+      val.title = value;
+
+      const status = document.createElement('span');
+      status.className = `seo-signal-status ${statusClass}`;
+      status.textContent = statusText;
+
+      row.appendChild(lbl);
+      row.appendChild(val);
+      row.appendChild(status);
+      list.appendChild(row);
+    };
+
+    // Title
+    const titleLen = seoData.title?.length ?? 0;
+    const titleStatus = !seoData.title     ? ['status-bad','✗ missing']
+      : titleLen < 30                      ? ['status-warn','! short']
+      : titleLen > 70                      ? ['status-warn','! long']
+      : ['status-good','✓'];
+    addRow('Title', seoData.title ? `${seoData.title} (${titleLen})` : '—', ...titleStatus);
+
+    // Description
+    const descLen = seoData.description?.length ?? 0;
+    const descStatus = !seoData.description ? ['status-bad','✗ missing']
+      : descLen < 50                        ? ['status-warn','! short']
+      : descLen > 175                       ? ['status-warn','! long']
+      : ['status-good','✓'];
+    addRow('Description', seoData.description ? `${seoData.description.substring(0, 60)}… (${descLen})` : '—', ...descStatus);
+
+    // Canonical
+    const canonStatus = seoData.canonical ? ['status-good','✓'] : ['status-warn','! missing'];
+    addRow('Canonical', seoData.canonical || '—', ...canonStatus);
+
+    // Robots
+    const noindex = seoData.robots?.includes('noindex');
+    const robotsStatus = noindex ? ['status-warn','! noindex'] : ['status-good','✓'];
+    addRow('Robots', seoData.robots || 'not set (index, follow)', ...robotsStatus);
+
+    // H1
+    const h1Count = seoData.h1s?.length ?? 0;
+    const h1Text = h1Count === 0 ? 'none found'
+      : h1Count === 1 ? `"${seoData.h1s[0].substring(0, 50)}"`
+      : `${h1Count} found: "${seoData.h1s[0].substring(0, 30)}…"`;
+    const h1Status = h1Count === 1 ? ['status-good','✓']
+      : h1Count === 0 ? ['status-bad','✗ none']
+      : ['status-warn','! multiple'];
+    addRow('H1', h1Text, ...h1Status);
+
+    // H2
+    addRow('H2s', `${seoData.h2Count} found`, 'status-good', '');
+
+    // Open Graph
+    const ogKeys = Object.keys(seoData.openGraph || {});
+    const hasOgCore = ['og:title','og:description','og:image'].every(k => ogKeys.includes(k));
+    const ogStatus = ogKeys.length === 0  ? ['status-warn','! none']
+      : hasOgCore                         ? ['status-good','✓']
+      : ['status-warn','! incomplete'];
+    addRow('Open Graph', ogKeys.length ? `${ogKeys.length} tags` : 'none', ...ogStatus);
+
+    // Twitter Cards
+    const twKeys = Object.keys(seoData.twitterCards || {});
+    const twStatus = twKeys.length > 0 ? ['status-good','✓'] : ['status-warn','! none'];
+    addRow('Twitter Cards', twKeys.length ? `${twKeys.length} tags` : 'none', ...twStatus);
+
+    // Image alt coverage
+    const { total, withAlt } = seoData.imageAltCoverage || { total: 0, withAlt: 0 };
+    const altPct = total > 0 ? Math.round(withAlt / total * 100) : 100;
+    const altStatus = altPct >= 90 ? ['status-good','✓']
+      : altPct >= 70 ? ['status-warn',`! ${altPct}%`]
+      : ['status-bad',`✗ ${altPct}%`];
+    addRow('Image alt', total > 0 ? `${withAlt}/${total} have alt` : 'no images', ...altStatus);
+
+    // Links
+    const { internal, external } = seoData.linkCounts || { internal: 0, external: 0 };
+    addRow('Links', `${internal} internal, ${external} external`, 'status-good', '');
+
+    // Hreflang (only shown if present)
+    if (seoData.hreflang?.length > 0) {
+      addRow('Hreflang', `${seoData.hreflang.length} alternate(s)`, 'status-good', '✓');
+    }
+  }
+
+  async loadPageSpeed(url) {
+    const resultsEl = document.getElementById('pageSpeedResults');
+    resultsEl.innerHTML = '<p class="ps-loading">Fetching PageSpeed data…</p>';
+
+    const categories = ['performance','seo','accessibility','best-practices'];
+    const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=mobile${categories.map(c => `&category=${c}`).join('')}`;
+
+    try {
+      const res = await fetch(apiUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      this.renderPageSpeed(data, resultsEl);
+    } catch (e) {
+      resultsEl.innerHTML = '<p class="ps-loading">Could not load PageSpeed data. Check connection or try again.</p>';
+    }
+  }
+
+  renderPageSpeed(psData, container) {
+    const cats   = psData?.lighthouseResult?.categories || {};
+    const audits = psData?.lighthouseResult?.audits || {};
+
+    container.innerHTML = '';
+
+    const scoreClass = s => s >= 0.9 ? 'ps-score-good' : s >= 0.5 ? 'ps-score-warn' : 'ps-score-bad';
+
+    const scoreLabels = [
+      ['performance',    'Performance'],
+      ['seo',            'SEO'],
+      ['accessibility',  'Accessibility'],
+      ['best-practices', 'Best Practices']
+    ];
+
+    const scoresRow = document.createElement('div');
+    scoresRow.className = 'ps-scores';
+
+    scoreLabels.forEach(([key, label]) => {
+      const score = cats[key]?.score ?? null;
+      const chip = document.createElement('div');
+      chip.className = `ps-score-chip ${score !== null ? scoreClass(score) : ''}`;
+
+      const num = document.createElement('span');
+      num.className = 'ps-score-num';
+      num.textContent = score !== null ? Math.round(score * 100) : '—';
+
+      const lbl = document.createElement('span');
+      lbl.className = 'ps-score-label';
+      lbl.textContent = label;
+
+      chip.appendChild(num);
+      chip.appendChild(lbl);
+      scoresRow.appendChild(chip);
+    });
+
+    container.appendChild(scoresRow);
+
+    // Core Web Vitals row
+    const cwvItems = [
+      ['largest-contentful-paint', 'LCP'],
+      ['cumulative-layout-shift',  'CLS'],
+      ['total-blocking-time',      'TBT']
+    ];
+
+    const cwvRow = document.createElement('div');
+    cwvRow.className = 'ps-cwv-row';
+
+    cwvItems.forEach(([auditKey, shortName]) => {
+      const audit = audits[auditKey];
+      if (!audit) return;
+      const item = document.createElement('span');
+      item.className = 'ps-cwv-item';
+      item.textContent = `${shortName}: ${audit.displayValue || '—'}`;
+      cwvRow.appendChild(item);
+    });
+
+    if (cwvRow.children.length > 0) container.appendChild(cwvRow);
   }
 }
 
